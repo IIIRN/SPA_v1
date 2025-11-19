@@ -29,7 +29,7 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
 
     return (
         <div className="p-4 bg-primary">
-            <header className="p-4 flex items-center justify-between">
+            <header className="bg-background p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     {profile?.pictureUrl ? (
                         <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
@@ -69,4 +69,5 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
         </div>
     );
 }
+
 
