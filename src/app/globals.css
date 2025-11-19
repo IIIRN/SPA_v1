@@ -33,18 +33,27 @@ body {
   color: var(--foreground);
   font-family: var(--font-barlow), var(--font-noto-sans-thai), sans-serif;
 }
-.bg-background {
-  background-color: var(--background);
 
+.bg-background {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.25),
+      rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
-.border{
-  background-color:#ffffff;
+
+.border {
+  background-color: #ffffff;
   border: 1px solid #dfdfdf;
 }
+
 .bg-card {
   background-color: var(--card);
   border: 1px solid var(--border);
 }
+
 .bg-primary {
   background: linear-gradient(135deg, #EEDCCB 0%, #CFB59E 50%, #AD8E70 100%);
 }
@@ -52,18 +61,23 @@ body {
 .bg-primary-light {
   background-color: var(--primary-light);
 }
+
 .bg-primary-dark {
   background-color: var(--primary-dark);
 }
+
 .bg-secondary {
   background-color: var(--secondary);
 }
+
 .bg-success {
   background-color: var(--success);
 }
+
 .bg-error {
   background-color: var(--error);
 }
+
 .bg-accent {
   background-color: var(--accent);
 }
@@ -71,9 +85,11 @@ body {
 .border-primary {
   border-color: var(--primary);
 }
+
 .text-primary-dark {
   color: var(--primary-dark);
 }
+
 .text-primary-light {
   color: var(--primary-light);
 }
@@ -81,21 +97,27 @@ body {
 .text-primary {
   color: var(--text);
 }
+
 .text-subtext {
   color: var(--subtext);
 }
+
 .text-success {
   color: var(--success);
 }
+
 .text-error {
   color: var(--error);
 }
+
 .text-warning {
   color: var(--warning);
 }
+
 .text-info {
   color: var(--info);
 }
+
 .glass-card {
   background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(25px);
@@ -123,12 +145,14 @@ body {
 }
 
 .weekly-holiday {
-  background-color: #FEE2E2 !important; /* สีแดงอ่อนสำหรับวันหยุดประจำสัปดาห์ */
+  background-color: #FEE2E2 !important;
+  /* สีแดงอ่อนสำหรับวันหยุดประจำสัปดาห์ */
   color: #991B1B !important;
 }
 
 .special-holiday {
-  background-color: #FEF3C7 !important; /* สีเหลืองอ่อนสำหรับวันหยุดพิเศษ */
+  background-color: #FEF3C7 !important;
+  /* สีเหลืองอ่อนสำหรับวันหยุดพิเศษ */
   color: #92400E !important;
 }
 
@@ -160,17 +184,19 @@ body {
 
 /* เพิ่มสไตล์สำหรับปฏิทิน */
 .weekly-holiday {
-  background-color: #FEE2E2 !important; /* สีแดงอ่อนสำหรับวันหยุดประจำสัปดาห์ */
+  background-color: #FEE2E2 !important;
+  /* สีแดงอ่อนสำหรับวันหยุดประจำสัปดาห์ */
   color: #b91d1d !important;
 }
 
 .special-holiday {
-  background-color: #FEF3C7 !important; /* สีเหลืองอ่อนสำหรับวันหยุดพิเศษ */
+  background-color: #FEF3C7 !important;
+  /* สีเหลืองอ่อนสำหรับวันหยุดพิเศษ */
   color: #ca6c13 !important;
 }
 
 .today-date {
-   /* สีน้ำเงินสำหรับวันปัจจุบัน */
+  /* สีน้ำเงินสำหรับวันปัจจุบัน */
   font-weight: bold;
   position: relative;
   overflow: hidden;
@@ -183,12 +209,10 @@ body {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.8),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.8),
+      transparent);
 }
 
 .glass-card::after {
@@ -198,14 +222,14 @@ body {
   left: 0;
   width: 1px;
   height: 100%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.8),
-    transparent,
-    rgba(255, 255, 255, 0.3)
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.8),
+      transparent,
+      rgba(255, 255, 255, 0.3));
 }
+
 .glitter {
   background: url("https://lh5.googleusercontent.com/d/1oRzZ7sopSDQpcubD9q4KHQiD83q_4kUI") repeat;
-  background-size: cover; /* ปรับเป็น 200px 200px ถ้าอยากให้ลายถี่ขึ้น */
+  background-size: cover;
+  /* ปรับเป็น 200px 200px ถ้าอยากให้ลายถี่ขึ้น */
 }
