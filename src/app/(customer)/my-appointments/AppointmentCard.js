@@ -18,7 +18,7 @@ const AppointmentCard = ({ job, onQrCodeClick, onCancelClick, onConfirmClick, is
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-primary-light p-4 text-primary">
+            <div className="bg-primary-dark p-4 text-primary-light">
                 <div className="flex justify-between items-center">
                     <div>
                         <div className="text-sm opacity-90">นัดหมายบริการ</div>
@@ -29,7 +29,7 @@ const AppointmentCard = ({ job, onQrCodeClick, onCancelClick, onConfirmClick, is
             </div>
 
             {/* Content Section */}
-            <div className="p-4">
+            <div className="p-6">
                 <div className="flex justify-between items-start text-sm mb-2">
                     <div className="flex-1">
                         <span className="font-semibold text-gray-800 block">{job.serviceInfo?.name}</span>
@@ -86,7 +86,7 @@ const AppointmentCard = ({ job, onQrCodeClick, onCancelClick, onConfirmClick, is
                             <button 
                                 onClick={() => onConfirmClick(job)}
                                 disabled={isConfirming}
-                                className=" bg-primary text-white py-2 px-4 rounded-lg font-semibold text-sm hover:bg-green-600 transition-colors disabled:bg-gray-400"
+                                className=" bg-primary-dark text-white py-2 px-4 rounded-lg font-semibold text-sm hover:bg-green-600 transition-colors disabled:bg-gray-400"
                             >
                                 {isConfirming ? '...' : 'ยืนยัน'}
                             </button>

@@ -227,7 +227,7 @@ function GeneralInfoContent() {
         <div>
             <ToastComponent />
             <CustomerHeader showBackButton={true} showActionButtons={false} />
-            <div className="p-4">
+            <div className="p-6">
                 <div className="bg-white rounded-2xl overflow-hidden mb-4">
                     <div className="p-4 border-b border-gray-100  text-black">
                         <div className="flex justify-between items-center mb-2">

@@ -28,8 +28,8 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
     if (loading || error) return null;
 
     return (
-        <div className="p-4 bg-primary">
-            <header className="bg-background p-4 flex items-center justify-between">
+        <div className="p-6 bg-primary">
+            <header className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     {profile?.pictureUrl ? (
                         <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
@@ -44,7 +44,7 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="bg-primary-light rounded-full px-7 py-3 text-primary font-medium text-md">
+                    <div className="bg-background rounded-full px-7 py-3 text-primary-dark font-medium text-md">
                         {customerData?.points ?? 0} พ้อย
                     </div>
                 </div>
@@ -54,13 +54,13 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
                 <div className="mt-4 grid grid-cols-2 gap-3">
                     <button
                         onClick={() => router.push('/appointment')}
-                        className="bg-white text-gray-800 rounded-xl py-3 font-medium text-base hover:shadow-md transition-shadow border border-gray-200"
+                        className="bg-primary-dark text-primary-light rounded-full py-3 font-medium text-base hover:shadow  transition-shadow border border-gray-200"
                     >
                         จองบริการ
                     </button>
                     <button
                         onClick={() => router.push('/my-coupons')}
-                        className="bg-white text-gray-800 rounded-xl py-3 font-medium text-base hover:shadow-md transition-shadow border border-gray-200"
+                        className="bg-white text-gray-800 rounded-full py-3 font-medium text-base hover:shadow  transition-shadow border border-gray-200"
                     >
                         คูปองของฉัน
                     </button>
@@ -69,5 +69,4 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
         </div>
     );
 }
-
 

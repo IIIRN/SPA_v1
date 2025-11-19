@@ -143,7 +143,7 @@ function ServiceDetailContent() {
         <div>
             <CustomerHeader showBackButton={true} showActionButtons={false} />
 
-            <div className="p-4">
+            <div className="p-6">
                 {/* รูปภาพและชื่อบริการ */}
                 <div className="flex gap-3 mb-4">
                     <div className="relative w-1/3 aspect-square rounded-xl overflow-hidden flex-shrink-0">
