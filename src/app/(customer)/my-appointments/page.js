@@ -109,7 +109,20 @@ export default function MyAppointmentsPage() {
     };
 
 
-    if (liffLoading) return <div className="p-4 text-center">รอสักครู่...</div>;
+    // --- 1. แก้ไข Loading หน้าแรก (LIFF) เป็น Icon หมุนๆ ธีมสีน้ำตาล ---
+    if (liffLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="relative">
+                    <div className="w-12 h-12 rounded-full border-4 border-gray-200"></div>
+                    {/* สี #553734 คือ primary-dark (สีน้ำตาลเข้ม) */}
+                    <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-[#553734] border-t-transparent animate-spin"></div>
+                </div>
+            </div>
+        );
+    }
+    // ---------------------------------------------------------------
+
     if (liffError) return <div className="p-4 text-center text-red-500">LIFF Error: {liffError}</div>;
 
     return (
@@ -133,15 +146,15 @@ export default function MyAppointmentsPage() {
             
             <div className="space-y-4">
                 <div className="font-bold text-md text-gray-700">นัดหมายของฉัน</div>
+                
+                {/* --- 2. แก้ไข Loading รายการนัดหมาย เป็น Icon หมุนๆ ธีมสีน้ำตาล --- */}
                 {loading ? (
-                    // --- ส่วนที่แก้ไข: Spinner Loading ---
                     <div className="flex items-center justify-center py-12">
                         <div className="relative">
                             <div className="w-12 h-12 rounded-full border-4 border-gray-200"></div>
-                            <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-pink-500 border-t-transparent animate-spin"></div>
+                            <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-[#553734] border-t-transparent animate-spin"></div>
                         </div>
                     </div>
-                    // -----------------------------------
                 ) : appointments.length === 0 ? (
                     <div className="text-center text-gray-500 pt-10 bg-white p-8 rounded-xl shadow-sm">
                         <p className="font-semibold">ไม่มีรายการนัดหมายที่กำลังดำเนินอยู่</p>
@@ -158,6 +171,8 @@ export default function MyAppointmentsPage() {
                         />
                     ))
                 )}
+                {/* -------------------------------------------------------------- */}
+
             </div>
             
             <div className="flex flex-col items-center mt-6">
