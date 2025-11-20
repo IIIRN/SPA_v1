@@ -33,11 +33,6 @@ export default function MyAppointmentsPage() {
     const [appointmentToCancel, setAppointmentToCancel] = useState(null);
     const [isCancelling, setIsCancelling] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
-    
-    // --- DEBUG STATE ---
-    const [debugStatus, setDebugStatus] = useState('Initializing...');
-    const [timeoutError, setTimeoutError] = useState(false);
-    const [forceRefresh, setForceRefresh] = useState(0);
 
     useEffect(() => {
         if (notification.show) {
@@ -47,58 +42,23 @@ export default function MyAppointmentsPage() {
     }, [notification]);
 
     useEffect(() => {
-        // 1. ถ้า LIFF ยังโหลดอยู่
-        if (liffLoading) {
-            setDebugStatus('Waiting for LIFF...');
+        if (liffLoading || !profile?.userId) {
+            if (!liffLoading) setLoading(false);
             return;
         }
-        
-        // 2. ถ้าไม่มี User ID (Error LIFF)
-        if (!profile?.userId) {
-            setLoading(false);
-            setDebugStatus('No User ID found from LIFF');
-            alert('Error: ไม่พบ User ID (LIFF มีปัญหา)'); // <--- Popup Alert
-            return;
-        }
-
         setLoading(true);
-        setDebugStatus(`Starting query for UserID: ${profile.userId}`);
-        setTimeoutError(false);
-
-        // 3. จับเวลา Timeout 10 วินาที ถ้า Firebase เงียบกริบ
-        const timeoutId = setTimeout(() => {
-            setLoading((currentLoading) => {
-                if (currentLoading) {
-                    const msg = '⚠️ Connection Timed Out! (Firebase ค้าง)\nกรุณาเช็ค firebase.js ว่าเปิด experimentalForceLongPolling หรือยัง';
-                    setDebugStatus(msg);
-                    setTimeoutError(true);
-                    alert(msg); // <--- Popup Alert
-                }
-                return currentLoading;
-            });
-        }, 10000);
-
         const appointmentsQuery = query(
             collection(db, 'appointments'),
             where("userId", "==", profile.userId),
             where("status", "in", ['awaiting_confirmation', 'confirmed', 'in_progress']),
             orderBy("appointmentInfo.dateTime", "asc")
         );
-
         const unsubscribe = onSnapshot(appointmentsQuery, (snapshot) => {
-            clearTimeout(timeoutId); // ถ้าโหลดได้ ให้ยกเลิก Timeout
             const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAppointments(docs);
             setLoading(false);
-            setDebugStatus(`Loaded ${docs.length} appointments.`);
         }, (error) => {
-            clearTimeout(timeoutId);
             console.error("Error fetching appointments:", error);
-            
-            const errMsg = `🔥 Firebase Error:\n${error.message}\nCode: ${error.code}`;
-            setDebugStatus(errMsg);
-            alert(errMsg); // <--- Popup Alert
-            
             setNotification({ show: true, title: 'Error', message: 'Could not fetch appointments.', type: 'error' });
             setLoading(false);
         });
@@ -116,32 +76,35 @@ export default function MyAppointmentsPage() {
                 setHistoryBookings(bookingsData);
             } catch (error) {
                 console.error("Error fetching booking history:", error);
-                // alert(`History Error: ${error.message}`); // History อาจจะไม่ต้อง Alert ก็ได้ครับ เดี๋ยวรบกวนเกิน
             }
         };
         fetchHistory();
-        return () => {
-            clearTimeout(timeoutId);
-            unsubscribe();
-        };
-    }, [profile, liffLoading, forceRefresh]);
+        return () => unsubscribe();
+    }, [profile, liffLoading]);
 
-    // ... (Code ส่วนอื่นๆ เหมือนเดิม) ...
-    const handleQrCodeClick = (appointmentId) => { setSelectedAppointmentId(appointmentId); setShowQrModal(true); };
-    const handleCancelClick = (appointment) => { setAppointmentToCancel(appointment); };
+    const handleQrCodeClick = (appointmentId) => {
+        setSelectedAppointmentId(appointmentId);
+        setShowQrModal(true);
+    };
+
+    const handleCancelClick = (appointment) => {
+        setAppointmentToCancel(appointment);
+    };
+
     const confirmCancelAppointment = async () => {
         if (!appointmentToCancel || !profile?.userId) return;
         setIsCancelling(true);
         const result = await cancelAppointmentByUser(appointmentToCancel.id, profile.userId);
+
         if (result.success) {
             setNotification({ show: true, title: 'สำเร็จ', message: 'การนัดหมายของคุณถูกยกเลิกแล้ว', type: 'success' });
         } else {
             setNotification({ show: true, title: 'ผิดพลาด', message: result.error, type: 'error' });
-            alert(`Cancel Error: ${result.error}`); // Alert ตอนยกเลิกพลาดด้วย
         }
         setIsCancelling(false);
         setAppointmentToCancel(null);
     };
+
     const handleConfirmClick = async (appointment) => {
         if (!profile?.userId) return;
         setIsConfirming(true);
@@ -150,17 +113,20 @@ export default function MyAppointmentsPage() {
             setNotification({ show: true, title: 'สำเร็จ', message: 'ยืนยันการนัดหมายเรียบร้อย', type: 'success' });
         } else {
             setNotification({ show: true, title: 'ผิดพลาด', message: result.error, type: 'error' });
-            alert(`Confirm Error: ${result.error}`); // Alert ตอนยืนยันพลาดด้วย
         }
         setIsConfirming(false);
     };
+
 
     // --- Loading ส่วน LIFF ---
     if (liffLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-                <SpaFlowerIcon className="w-16 h-16 animate-spin" color="#553734" style={{ animationDuration: '3s' }} />
-                <p className="mt-4 text-gray-500 text-sm">Connecting to LINE...</p>
+                <SpaFlowerIcon 
+                    className="w-16 h-16 animate-spin" 
+                    color="#553734" 
+                    style={{ animationDuration: '3s' }}
+                />
             </div>
         );
     }
@@ -180,39 +146,27 @@ export default function MyAppointmentsPage() {
                 onCancel={() => setAppointmentToCancel(null)}
                 isProcessing={isCancelling}
             />
-            <QrCodeModal show={showQrModal} onClose={() => setShowQrModal(false)} appointmentId={selectedAppointmentId} />
+            <QrCodeModal
+                show={showQrModal}
+                onClose={() => setShowQrModal(false)}
+                appointmentId={selectedAppointmentId}
+            />
             
-            {/* --- DEBUG SECTION --- */}
-            <div className="bg-gray-100 p-3 rounded-lg text-xs text-gray-600 font-mono border border-gray-300 mb-4 select-text">
-                <p><strong>Debug Info:</strong></p>
-                <p>User ID: {profile?.userId || 'Not found'}</p>
-                <p>Status: <span className={loading ? 'text-orange-500' : 'text-green-600'}>{debugStatus}</span></p>
-                
-                <button 
-                    onClick={() => setForceRefresh(prev => prev + 1)}
-                    className="mt-2 bg-blue-500 text-white px-3 py-1 rounded shadow hover:bg-blue-600 transition-colors"
-                >
-                    🔄 Force Refresh
-                </button>
-            </div>
-            {/* ------------------- */}
-
             <div className="space-y-4">
                 <div className="font-bold text-md text-gray-700">นัดหมายของฉัน</div>
                 
+                {/* --- Loading ส่วนรายการนัดหมาย --- */}
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-12">
-                         <SpaFlowerIcon className="w-14 h-14 animate-spin" color="#553734" style={{ animationDuration: '3s' }} />
-                         {timeoutError && (
-                            <button onClick={() => window.location.reload()} className="mt-4 text-primary underline font-bold">
-                                กดที่นี่เพื่อโหลดหน้าใหม่ (Reload)
-                            </button>
-                         )}
+                         <SpaFlowerIcon 
+                            className="w-14 h-14 animate-spin" 
+                            color="#553734" 
+                            style={{ animationDuration: '3s' }}
+                        />
                     </div>
                 ) : appointments.length === 0 ? (
                     <div className="text-center text-gray-500 pt-10 bg-white p-8 rounded-xl shadow-sm">
                         <p className="font-semibold">ไม่มีรายการนัดหมายที่กำลังดำเนินอยู่</p>
-                        <p className="text-xs text-gray-400 mt-2">(UserID: {profile?.userId?.substring(0, 8)}...)</p>
                     </div>
                 ) : (
                     appointments.map((job) => (
@@ -226,9 +180,11 @@ export default function MyAppointmentsPage() {
                         />
                     ))
                 )}
+                {/* -------------------------------- */}
+
             </div>
             
-             <div className="flex flex-col items-center mt-6">
+            <div className="flex flex-col items-center mt-6">
                 <button
                     className="text-primary flex items-center gap-2 focus:outline-none"
                     onClick={() => setShowHistory(v => !v)}
@@ -236,16 +192,17 @@ export default function MyAppointmentsPage() {
                     <span className="text-md">{showHistory ? '▲ ซ่อนประวัติที่ผ่านมา' : '▼ ดูประวัติที่ผ่านมา'}</span>
                 </button>
             </div>
+            
             {showHistory && (
                 <div className="space-y-4 mt-2">
-                     <div className="text-sm text-gray-700">ประวัติการใช้บริการ</div>
+                    <div className="text-sm text-gray-700">ประวัติการใช้บริการ</div>
                     {historyBookings.length === 0 ? (
                         <div className="text-center text-gray-500 pt-10 bg-white p-8 rounded-xl">
                             <p>ยังไม่มีประวัติการใช้บริการ</p>
                         </div>
                     ) : (
                         historyBookings.map(job => (
-                             <HistoryCard
+                            <HistoryCard
                                 key={job.id}
                                 appointment={job}
                                 onBookAgain={() => { window.location.href = '/appointment'; }}
