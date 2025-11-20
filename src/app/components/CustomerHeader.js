@@ -7,32 +7,40 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// Component ไอคอนเหรียญ (Coin Icon)
+const CoinIcon = ({ className = "w-6 h-6", ...props }) => (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className={className}
+        {...props}
+    >
+        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+    </svg>
+);
+
 export default function CustomerHeader({ showBackButton = false, showActionButtons = true }) {
     const { profile, loading: liffLoading, error: liffError } = useLiffContext();
     const [customerData, setCustomerData] = useState(null);
-    const [dbError, setDbError] = useState(null); // เพิ่ม State สำหรับเก็บ Error
+    const [dbError, setDbError] = useState(null);
     const router = useRouter();
 
     useEffect(() => {
         let unsubscribe = () => { };
-        
-        // ตรวจสอบว่ามี profile และ userId จริงๆ
-        if (!liffLoading && profile?.userId) {
-            // Debug: เช็คว่ากำลังดึงข้อมูลของ User ID ไหน
-            // console.log("Fetching data for UserID:", profile.userId); 
 
+        if (!liffLoading && profile?.userId) {
             const customerRef = doc(db, "customers", profile.userId);
-            
+
             unsubscribe = onSnapshot(customerRef, (doc) => {
                 if (doc.exists()) {
                     setCustomerData(doc.data());
-                    setDbError(null); // เคลียร์ Error ถ้าโหลดสำเร็จ
+                    setDbError(null);
                 } else {
                     console.warn("ไม่พบข้อมูลลูกค้าใน Database (อาจเป็นลูกค้าใหม่)");
-                    setCustomerData({ points: 0 }); // กำหนดค่าเริ่มต้น
+                    setCustomerData({ points: 0 });
                 }
             }, (error) => {
-                // เพิ่มส่วนจัดการ Error
                 console.error("Firebase Error:", error);
                 setDbError("เชื่อมต่อข้อมูลไม่สำเร็จ");
             });
@@ -40,45 +48,50 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
         return () => unsubscribe();
     }, [profile, liffLoading]);
 
-    // ถ้า LIFF ยังโหลดไม่เสร็จ ให้แสดง Loading ว่างๆ หรือ Skeleton ก็ได้
     if (liffLoading) return <div className="p-6 bg-primary animate-pulse h-32"></div>;
-    
-    // ถ้า LIFF Error
+
     if (liffError) return null;
 
     return (
         <div className="p-6 bg-primary">
             <header className="flex items-center justify-between">
+                {/* ส่วนโปรไฟล์ซ้ายมือ */}
                 <div className="flex items-center gap-3">
                     {profile?.pictureUrl ? (
-                        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20">
+                        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-sm">
                             <Image src={profile.pictureUrl} width={56} height={56} alt="Profile" className="w-full h-full object-cover" />
                         </div>
                     ) : (
-                        <div className="w-14 h-14 rounded-full bg-gray-800 flex-shrink-0 border-2 border-white/20" />
+                        <div className="w-14 h-14 rounded-full bg-gray-800 flex-shrink-0 border-2 border-white/20 shadow-sm" />
                     )}
                     <div>
                         <p className="text-sm text-primary-dark opacity-80">สวัสดี</p>
-                        <p className="font-semibold text-primary-dark text-lg">
+                        <p className="font-semibold text-primary-dark text-lg line-clamp-1">
                             {profile?.displayName || 'ผู้ใช้'}
                         </p>
-                        {/* แสดง Error ถ้ามี */}
                         {dbError && <p className="text-xs text-red-600 bg-white/80 px-1 rounded mt-1">{dbError}</p>}
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="bg-background rounded-full px-5 py-2 text-primary-dark font-medium text-md shadow-sm flex flex-col items-end min-w-[100px]">
-                        <span className="text-lg leading-none">{customerData?.points ?? 0}</span>
-                        <span className="text-xs text-gray-500">พ้อยท์</span>
+
+                {/* ส่วนแสดงแต้มสะสม (แก้ไขใหม่) */}
+                <div className="flex flex-col items-end gap-1">
+                    <span className="text-sm font-medium text-primary-dark opacity-90">แต้มสะสม</span>
+                    <div className="bg-white rounded-full px-4 py-2 shadow-sm border border-gray-100 flex items-center gap-2">
+                        <div className="bg-yellow-100 rounded-full p-1">
+                            <CoinIcon className="w-5 h-5 text-yellow-500" />
+                        </div>
+                        <span className="text-lg font-bold text-gray-800 leading-none">
+                            {customerData?.points ?? 0} <span className="text-sm font-normal text-gray-500">แต้ม</span>
+                        </span>
                     </div>
                 </div>
             </header>
 
             {showActionButtons && (
-                <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="mt-6 grid grid-cols-2 gap-3">
                     <button
                         onClick={() => router.push('/appointment')}
-                        className="bg-primary-dark text-primary-light rounded-full py-3 font-medium text-base hover:shadow-md transition-all active:scale-95 border border-gray-200"
+                        className="bg-primary-dark text-primary-light rounded-full py-3 font-medium text-base hover:shadow-md transition-all active:scale-95 border border-gray-200/20"
                     >
                         จองบริการ
                     </button>
