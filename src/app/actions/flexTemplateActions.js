@@ -49,14 +49,14 @@ export async function createPaymentFlexTemplate(appointmentData) {
                         text: "ชำระเงิน",
                         weight: "bold",
                         size: "md",
-                        color: "#A8999E",
+                        color: "#553734",
                         align: "center",
                         margin: "none"
                     },
                     {
                         type: "separator",
                         margin: "md",
-                        color: "#A8999E"
+                        color: "#553734"
                     },
                     {
                         type: "text",
@@ -174,7 +174,7 @@ export async function createPaymentFlexTemplate(appointmentData) {
                                 text: `${formattedAmount} ${currencySymbol}`,
                                 weight: "bold",
                                 size: "md",
-                                color: "#A8999E",
+                                color: "#553734",
                                 align: "end"
                             }
                         ],
@@ -200,7 +200,7 @@ export async function createPaymentFlexTemplate(appointmentData) {
                             label: "ชำระเงิน",
                             uri: `https://liff.line.me/${process.env.NEXT_PUBLIC_PAYMENT_LIFF_ID}/${id}`
                         },
-                        color: "#A8999E"
+                        color: "#553734"
                     }
                 ],
                 spacing: "sm",
@@ -237,14 +237,14 @@ export async function createReviewFlexTemplate(appointmentData) {
                         text: "ให้คะแนนรีวิว",
                         weight: "bold",
                         size: "md",
-                        color: "#A8999E",
+                        color: "#553734",
                         align: "center",
                         margin: "none"
                     },
                     {
                         type: "separator",
                         margin: "md",
-                        color: "#A8999E"
+                        color: "#553734"
                     },
                     {
                         type: "text",
@@ -258,7 +258,7 @@ export async function createReviewFlexTemplate(appointmentData) {
                         type: "text",
                         text: "ช่วยรีวิวบริการของเรา",
                         size: "md",
-                        color: "#A8999E",
+                        color: "#553734",
                         weight: "bold",
                         margin: "sm"
                     },
@@ -305,7 +305,7 @@ export async function createReviewFlexTemplate(appointmentData) {
                                         text: "วันที่",
                                         size: "sm",
                                         color: "#666666",
-                                        flex: 2
+                                        flex:2
                                     },
                                     {
                                         type: "text",
@@ -340,7 +340,7 @@ export async function createReviewFlexTemplate(appointmentData) {
                                 type: "text",
                                 text: "กดปุ่มด้านล่างเพื่อให้คะแนนและแสดงความคิดเห็น",
                                 size: "sm",
-                                color: "#A8999E",
+                                color: "#553734",
                                 wrap: true,
                                 align: "center"
                             }
@@ -367,7 +367,7 @@ export async function createReviewFlexTemplate(appointmentData) {
                             label: "ให้คะแนน",
                             uri: `https://liff.line.me/${process.env.NEXT_PUBLIC_REVIEW_LIFF_ID}/${safeId}`
                         },
-                        color: "#A8999E"
+                        color: "#553734"
                     }
                 ],
                 spacing: "sm",
@@ -398,7 +398,7 @@ export async function createReviewThankYouFlexTemplate(reviewData) {
                         text: "ขอบคุณสำหรับรีวิว!",
                         weight: "bold",
                         size: "md",
-                        color: "#A8999E",
+                        color: "#553734",
                         align: "center",
                         margin: "none"
                     },
@@ -406,14 +406,14 @@ export async function createReviewThankYouFlexTemplate(reviewData) {
                         type: "text",
                         text: stars,
                         size: "md",
-                        color: "#A8999E",
+                        color: "#553734",
                         align: "center",
                         margin: "sm"
                     },
                     {
                         type: "separator",
                         margin: "md",
-                        color: "#A8999E"
+                        color: "#553734"
                     },
                     {
                         type: "text",
@@ -439,7 +439,7 @@ export async function createReviewThankYouFlexTemplate(reviewData) {
                                 text: `${rating}/5 ดาว`,
                                 weight: "bold",
                                 size: "md",
-                                color: "#A8999E",
+                                color: "#553734",
                                 align: "end"
                             }
                         ],
@@ -481,9 +481,9 @@ export async function createReviewThankYouFlexTemplate(reviewData) {
                         contents: [
                             {
                                 type: "text",
-                                text: "ความคิดเห็นของคุณมีค่ามากสำหรับเรา เราจะนำไปปรับปรุงบริการให้ดียิ่งขึ้น",
+                                text: "ความคิดเห็นของคุณมีค่ามากสำหรับเรา เราจะนำไปปรับปรุงบริการต่อไป",
                                 size: "sm",
-                                color: "#A8999E",
+                                color: "#553734",
                                 wrap: true,
                                 align: "center"
                             }
@@ -682,14 +682,14 @@ export async function createServiceCompletedFlexTemplate(appointmentData) {
                         text: "บริการเสร็จสมบูรณ์",
                         weight: "bold",
                         size: "md",
-                        color: "#A8999E",
+                        color: "#553734",
                         align: "center",
                         margin: "none"
                     },
                     {
                         type: "separator",
                         margin: "md",
-                        color: "#A8999E"
+                        color: "#553734"
                     },
                     {
                         type: "text",
@@ -703,7 +703,7 @@ export async function createServiceCompletedFlexTemplate(appointmentData) {
                         type: "text",
                         text: `บริการ "${serviceName}" เสร็จสิ้นเรียบร้อยแล้ว`,
                         size: "md",
-                        color: "#A8999E",
+                        color: "#553734",
                         weight: "bold",
                         margin: "sm"
                     },
@@ -732,7 +732,7 @@ export async function createServiceCompletedFlexTemplate(appointmentData) {
                                     text: `${totalPointsAwarded} พ้อย`,
                                     weight: "bold",
                                     size: "md",
-                                    color: "#A8999E",
+                                    color: "#553734",
                                     align: "end"
                                 }
                             ],
@@ -771,7 +771,7 @@ export async function createServiceCompletedFlexTemplate(appointmentData) {
                                 type: "text",
                                 text: "ขอบคุณที่ใช้บริการ หากมีข้อเสนอแนะยินดีรับฟังเสมอ",
                                 size: "sm",
-                                color: "#A8999E",
+                                color: "#553734",
                                 wrap: true,
                                 align: "center"
                             }
@@ -1161,13 +1161,13 @@ export async function createAppointmentReminderFlexTemplate(bookingData) {
                         text: "แจ้งเตือนการนัดหมาย",
                         weight: "bold",
                         size: "md",
-                        color: "#A8999E",
+                        color: "#553734",
                         align: "center"
                     },
                     {
                         type: "separator",
                         margin: "md",
-                        color: "#A8999E"
+                        color: "#553734"
                     },
                     {
                         type: "text",
@@ -1314,7 +1314,7 @@ export async function createAppointmentReminderFlexTemplate(bookingData) {
                         type: "text",
                         text: "กรุณามาตรงเวลานะคะ ขอบคุณค่ะ ✨",
                         wrap: true,
-                        color: "#A8999E",
+                        color: "#553734",
                         size: "sm",
                         weight: "bold",
                         align: "center",
@@ -1362,14 +1362,14 @@ export async function createDailyAppointmentNotificationFlexTemplate(appointment
                         text: needsConfirmation ? "⏰ แจ้งเตือนการนัดหมาย" : "📅 นัดหมายวันนี้",
                         weight: "bold",
                         size: "md",
-                        color: needsConfirmation ? "#FF9800" : "#A8999E",
+                        color: needsConfirmation ? "#FF9800" : "#553734",
                         align: "center",
                         margin: "none"
                     },
                     {
                         type: "separator",
                         margin: "md",
-                        color: needsConfirmation ? "#FF9800" : "#A8999E"
+                        color: needsConfirmation ? "#FF9800" : "#553734"
                     },
                     {
                         type: "text",
@@ -1382,7 +1382,7 @@ export async function createDailyAppointmentNotificationFlexTemplate(appointment
                     {
                         type: "text",
                         text: needsConfirmation ? 
-                            "คุณมีนัดหมายวันนี้ที่ยังไม่ได้ยืนยัน กรุณายืนยันการนัดหมาย" :
+                            "คุณมีนัดหมายวันนี้ที่ยังไม่ได้ยืนยัน กรุณายืนยันการนัดหมายก่อนเวลาเพื่อความสะดวก" :
                             "ขอเตือนว่าคุณมีนัดหมายวันนี้ เตรียมตัวมาให้พร้อมนะคะ",
                         size: "sm",
                         color: needsConfirmation ? "#FF5722" : "#666666",
@@ -1540,7 +1540,7 @@ export async function createDailyAppointmentNotificationFlexTemplate(appointment
                     type: "text",
                     text: "ขอบคุณที่ไว้วางใจในบริการของเรา",
                     size: "xs",
-                    color: "#A8999E",
+                    color: "#553734",
                     align: "center",
                     wrap: true,
                     weight: "bold"
@@ -1708,4 +1708,3 @@ export async function createPaymentConfirmationFlexTemplate(appointmentData) {
         }
     };
 }
-
