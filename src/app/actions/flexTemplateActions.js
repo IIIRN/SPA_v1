@@ -998,7 +998,7 @@ export async function createNewBookingFlexTemplate(appointmentData) {
                         text: "คำขอจอง",
                         weight: "bold",
                         size: "md",
-                        color: "#7F7679",
+                        color: "#553734",
                         align: "center",
                         margin: "none"
                     },
@@ -1114,14 +1114,14 @@ export async function createNewBookingFlexTemplate(appointmentData) {
                                 type: "text",
                                 text: "โปรด ยืนยัน การจองของคุณ",
                                 size: "sm",
-                                color: "#7F7679",
+                                color: "#553734",
                                 wrap: true,
                                 align: "center"
                             }
                         ],
                         margin: "md",
                         paddingAll: "12px",
-                        backgroundColor: "#FFFDE7",
+                        backgroundColor: "#F5F2ED", // <--- changed from #FFFDE7
                         cornerRadius: "8px"
                     }
                 ],
