@@ -109,18 +109,7 @@ export default function MyAppointmentsPage() {
     };
 
 
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                <div className="relative">
-                    {/* วงกลมพื้นหลัง */}
-                    <div className="w-12 h-12 rounded-full border-4 border-pink-100"></div>
-                    {/* วงกลมหมุน (Spinner) */}
-                    <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-pink-500 border-t-transparent animate-spin"></div>
-                </div>
-            </div>
-        );
-    
+    if (liffLoading) return <div className="p-4 text-center">รอสักครู่...</div>;
     if (liffError) return <div className="p-4 text-center text-red-500">LIFF Error: {liffError}</div>;
 
     return (
@@ -195,5 +184,6 @@ export default function MyAppointmentsPage() {
         </div>
     );
 }
+
 
 
