@@ -1,7 +1,10 @@
 // src/app/lib/firebase.js
-
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, initializeFirestore, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
+import { 
+  getFirestore, 
+  initializeFirestore, 
+  CACHE_SIZE_UNLIMITED 
+} from "firebase/firestore"; // [1] เพิ่ม import initializeFirestore
 import { getAuth } from "firebase/auth"; 
 
 const firebaseConfig = {
@@ -13,27 +16,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// ประกาศตัวแปรไว้นอกเงื่อนไข
 let app;
 let db;
 
-// ตรวจสอบว่ามีการ Initialize App ไปหรือยัง
 if (getApps().length === 0) {
-  // กรณีเริ่มทำงานครั้งแรก (Cold Start)
-  app = initializeApp(firebaseConfig);
-  
-  // *** จุดสำคัญ: บังคับใช้ Long Polling เพื่อแก้ปัญหาใน LINE ***
-  db = initializeFirestore(app, {
-    experimentalForceLongPolling: true, // ต้องมีบรรทัดนี้
-    cacheSizeBytes: CACHE_SIZE_UNLIMITED
-  });
-  console.log("🔥 Firebase initialized with Long Polling"); // เพิ่ม Log เพื่อเช็ค
+    app = initializeApp(firebaseConfig);
+    
+    // [2] เปลี่ยนจาก getFirestore เป็น initializeFirestore พร้อม options
+    db = initializeFirestore(app, {
+        experimentalForceLongPolling: true, // <--- หัวใจสำคัญ: แก้ปัญหา LINE ค้าง
+        cacheSizeBytes: CACHE_SIZE_UNLIMITED
+    });
+    console.log("🔥 Firebase initialized with Long Polling");
 
 } else {
-  // กรณีแอปถูกโหลดไว้แล้ว (Hot Reload / Fast Refresh)
-  app = getApps()[0];
-  // พยายามใช้ db เดิม หรือถ้าไม่มีให้ get ใหม่ (แต่ถ้า hot reload ค่านี้อาจจะเป็นค่าเก่าที่ไม่มี polling)
-  db = getFirestore(app);
+    app = getApps()[0];
+    db = getFirestore(app);
 }
 
 const auth = getAuth(app); 
