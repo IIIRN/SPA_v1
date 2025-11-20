@@ -1,7 +1,7 @@
 // src/app/(customer)/my-appointments/page.js
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { useLiffContext } from '@/context/LiffProvider';
@@ -34,8 +34,19 @@ export default function MyAppointmentsPage() {
     const [isCancelling, setIsCancelling] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
     
-    // [DEBUG] State สำหรับเก็บข้อความ Debug
-    const [debugLog, setDebugLog] = useState(null);
+    // [DEBUG] State สำหรับเก็บข้อความ Debug logs
+    const [logs, setLogs] = useState([]);
+    const logsEndRef = useRef(null);
+
+    const logDebug = (message) => {
+        const time = new Date().toLocaleTimeString('th-TH', { hour12: false });
+        setLogs(prev => [...prev, `[${time}] ${message}`]);
+    };
+
+    // Auto scroll debug logs
+    useEffect(() => {
+        logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [logs]);
 
     useEffect(() => {
         if (notification.show) {
@@ -51,9 +62,9 @@ export default function MyAppointmentsPage() {
         }
         setLoading(true);
         
-        // [DEBUG] เริ่มดึงข้อมูล
-        // setDebugLog(`Fetching appointments for user: ${profile.userId}`);
+        logDebug(`🚀 START: Fetching for user ${profile.userId.substring(0, 6)}...`);
 
+        // --- Real-time Appointments Listener ---
         const appointmentsQuery = query(
             collection(db, 'appointments'),
             where("userId", "==", profile.userId),
@@ -61,20 +72,38 @@ export default function MyAppointmentsPage() {
             orderBy("appointmentInfo.dateTime", "asc")
         );
         
+        logDebug(`📡 Connecting Firestore Listener...`);
+
         const unsubscribe = onSnapshot(appointmentsQuery, (snapshot) => {
+            const source = snapshot.metadata.fromCache ? "📁 Local Cache" : "☁️ Server";
+            logDebug(`✅ Snapshot received from: ${source}`);
+            
+            if (snapshot.empty) {
+                logDebug(`ℹ️ No active appointments found.`);
+            } else {
+                logDebug(`📦 Found ${snapshot.size} active appointments.`);
+            }
+
+            // Log specific changes (Modified/Added/Removed)
+            snapshot.docChanges().forEach((change) => {
+                const docData = change.doc.data();
+                logDebug(`🔔 ${change.type.toUpperCase()}: ${docData.serviceInfo?.name || 'Unknown Service'} (${change.doc.id})`);
+            });
+
             const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAppointments(docs);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching appointments:", error);
-            // [DEBUG] เก็บ Error ลง State
-            setDebugLog(`Firestore Snapshot Error: ${error.message || JSON.stringify(error)}`);
+            logDebug(`❌ FIREBASE ERROR: ${error.code} - ${error.message}`);
             setNotification({ show: true, title: 'Error', message: 'Could not fetch appointments.', type: 'error' });
             setLoading(false);
         });
         
+        // --- Fetch History (One-time get) ---
         const fetchHistory = async () => {
             try {
+                logDebug(`⏳ Fetching history...`);
                 const bookingsQuery = query(
                     collection(db, 'appointments'),
                     where("userId", "==", profile.userId),
@@ -82,16 +111,20 @@ export default function MyAppointmentsPage() {
                     orderBy("appointmentInfo.dateTime", "desc")
                 );
                 const querySnapshot = await getDocs(bookingsQuery);
+                logDebug(`📚 History loaded: ${querySnapshot.size} items.`);
                 const bookingsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setHistoryBookings(bookingsData);
             } catch (error) {
                 console.error("Error fetching booking history:", error);
-                // [DEBUG] เก็บ Error ลง State
-                setDebugLog(prev => (prev ? prev + "\n" : "") + `History Error: ${error.message}`);
+                logDebug(`❌ HISTORY ERROR: ${error.message}`);
             }
         };
+
         fetchHistory();
-        return () => unsubscribe();
+        return () => {
+            logDebug(`🛑 Unsubscribing listener...`);
+            unsubscribe();
+        };
     }, [profile, liffLoading]);
 
     const handleQrCodeClick = (appointmentId) => {
@@ -106,11 +139,15 @@ export default function MyAppointmentsPage() {
     const confirmCancelAppointment = async () => {
         if (!appointmentToCancel || !profile?.userId) return;
         setIsCancelling(true);
+        logDebug(`🔄 Cancelling appointment: ${appointmentToCancel.id}...`);
+        
         const result = await cancelAppointmentByUser(appointmentToCancel.id, profile.userId);
 
         if (result.success) {
+            logDebug(`✅ Cancel Success`);
             setNotification({ show: true, title: 'สำเร็จ', message: 'การนัดหมายของคุณถูกยกเลิกแล้ว', type: 'success' });
         } else {
+            logDebug(`❌ Cancel Failed: ${result.error}`);
             setNotification({ show: true, title: 'ผิดพลาด', message: result.error, type: 'error' });
         }
         setIsCancelling(false);
@@ -120,17 +157,20 @@ export default function MyAppointmentsPage() {
     const handleConfirmClick = async (appointment) => {
         if (!profile?.userId) return;
         setIsConfirming(true);
+        logDebug(`🔄 Confirming appointment: ${appointment.id}...`);
+        
         const result = await confirmAppointmentByUser(appointment.id, profile.userId);
         if (result.success) {
+            logDebug(`✅ Confirm Success`);
             setNotification({ show: true, title: 'สำเร็จ', message: 'ยืนยันการนัดหมายเรียบร้อย', type: 'success' });
         } else {
+            logDebug(`❌ Confirm Failed: ${result.error}`);
             setNotification({ show: true, title: 'ผิดพลาด', message: result.error, type: 'error' });
         }
         setIsConfirming(false);
     };
 
 
-    // --- Loading ส่วน LIFF ---
     if (liffLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
@@ -144,13 +184,10 @@ export default function MyAppointmentsPage() {
         );
     }
 
-    // if (liffError) return <div className="p-4 text-center text-red-500">LIFF Error: {liffError}</div>;
-
     return (
-        <div className="pb-20"> {/* เพิ่ม padding bottom เผื่อ Debug bar บัง */}
+        <div className="pb-40"> {/* เพิ่ม padding เยอะๆ กัน Debug บัง */}
             <CustomerHeader showBackButton={false} showActionButtons={true} />
             
-            {/* [DEBUG] แสดง Error ของ LIFF ถ้ามี */}
             {liffError && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 m-4 rounded relative">
                     <strong className="font-bold">LIFF Error: </strong>
@@ -177,7 +214,6 @@ export default function MyAppointmentsPage() {
             <div className="space-y-4">
                 <div className="font-bold text-md text-gray-700">นัดหมายของฉัน</div>
                 
-                {/* --- Loading ส่วนรายการนัดหมาย --- */}
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-12">
                          <SpaFlowerIcon 
@@ -202,7 +238,6 @@ export default function MyAppointmentsPage() {
                         />
                     ))
                 )}
-                {/* -------------------------------- */}
 
             </div>
             
@@ -235,39 +270,21 @@ export default function MyAppointmentsPage() {
             )}
             </div>
 
-            {/* [DEBUG] Section แสดงผล Debug แบบหน้าจอ console */}
-            <div className="mx-4 mt-8 p-4 bg-black bg-opacity-90 rounded-lg text-xs font-mono text-green-400 break-words shadow-lg overflow-x-auto">
-                <h3 className="text-white font-bold border-b border-gray-600 pb-1 mb-2">🔧 Debug Info (On-Screen)</h3>
-                
-                <div className="mb-2">
-                    <span className="text-white">User ID:</span> {profile?.userId || <span className="text-red-500">Not Found</span>}
+            {/* [ADVANCED DEBUG CONSOLE] */}
+            <div className="fixed bottom-0 left-0 w-full h-48 bg-black bg-opacity-95 text-green-400 text-[10px] font-mono p-2 overflow-hidden flex flex-col z-50 border-t-2 border-green-600 shadow-2xl">
+                <div className="flex justify-between items-center border-b border-gray-700 pb-1 mb-1 bg-black">
+                    <span className="font-bold text-white">🔥 Firebase Debugger</span>
+                    <span className="text-gray-400">UID: {profile?.userId?.substring(0, 8) || '...'}</span>
                 </div>
-                <div className="mb-2">
-                    <span className="text-white">Name:</span> {profile?.displayName || '-'}
+                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600">
+                    {logs.length === 0 && <div className="text-gray-500 italic">Waiting for logs...</div>}
+                    {logs.map((log, index) => (
+                        <div key={index} className="mb-0.5 break-words border-b border-gray-800 border-opacity-30 pb-0.5">
+                            {log}
+                        </div>
+                    ))}
+                    <div ref={logsEndRef} />
                 </div>
-                <div className="mb-2">
-                    <span className="text-white">Appointments:</span> {appointments.length}
-                </div>
-                <div className="mb-2">
-                    <span className="text-white">LIFF Status:</span> {liffLoading ? 'Loading...' : 'Ready'} | {liffError ? 'Error' : 'OK'}
-                </div>
-
-                {/* แสดง Error Log ล่าสุด ถ้ามี */}
-                {debugLog && (
-                    <div className="mt-2 p-2 bg-red-900 bg-opacity-50 border border-red-500 rounded text-red-200">
-                        <strong>Last Error:</strong> {debugLog}
-                    </div>
-                )}
-
-                {/* ปุ่มสำหรับดู Raw JSON Profile */}
-                <details className="mt-2">
-                    <summary className="cursor-pointer text-blue-300 hover:text-blue-200">
-                        Show Full Profile JSON
-                    </summary>
-                    <pre className="mt-2 p-2 bg-gray-800 rounded text-gray-300 whitespace-pre-wrap">
-                        {JSON.stringify(profile, null, 2)}
-                    </pre>
-                </details>
             </div>
 
         </div>
