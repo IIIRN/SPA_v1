@@ -312,7 +312,7 @@ function SelectDateTimeContent() {
             {/* Service Summary */}
             {service && (
                 <div className="w-full max-w-md mx-auto mb-6">
-                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
+                    <div className="bg-white rounded-2xl p-4 border border-primary">
                         <div className="flex items-center gap-3">
                             <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
                                 <Image
@@ -323,7 +323,7 @@ function SelectDateTimeContent() {
                                 />
                             </div>
                             <div className="flex-1">
-                                <h3 className="text-md font-bold text-gray-800">{service.serviceName}</h3>
+                                <h3 className="text-md font-bold text-primary-dark">{service.serviceName}</h3>
                                 {service.serviceType === 'multi-area' && areaIndex !== null && packageIndex !== null && service.areas?.[areaIndex] && (
                                     <p className="text-sm text-gray-600">
                                         {service.areas[areaIndex].name} - {service.areas[areaIndex].packages[packageIndex].duration} นาที
@@ -338,7 +338,7 @@ function SelectDateTimeContent() {
             )}
             
             {/* Calendar */}
-            <div className="w-full bg-white/30 border border-[#A8999E] p-4 rounded-2xl max-w-md mx-auto flex flex-col items-center">
+            <div className="w-full bg-white/30 border border-primary p-4 rounded-2xl max-w-md mx-auto flex flex-col items-center">
                 <div className="flex items-center justify-between w-full mb-4">
                     <button
                         onClick={() => setActiveMonth(prev => {

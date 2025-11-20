@@ -53,7 +53,7 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
     if (liffError) return null;
 
     return (
-        <div className="p-6 bg-primary">
+        <div className="px-6 pt-6 bg-primary">
             <header className="flex items-center justify-between">
                 {/* ส่วนโปรไฟล์ซ้ายมือ */}
                 <div className="flex items-center gap-3">
@@ -75,8 +75,7 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
 
                 {/* ส่วนแสดงแต้มสะสม (แก้ไขใหม่) */}
                 <div className="flex flex-col items-end gap-1">
-                    <span className="text-sm font-medium text-primary-dark opacity-90">แต้มสะสม</span>
-                    <div className="bg-white rounded-full px-4 py-2 shadow-sm border border-gray-100 flex items-center gap-2">
+                    <div className="bg-background rounded-full px-4 py-2 flex items-center gap-2">
                         <div className="bg-yellow-100 rounded-full p-1">
                             <CoinIcon className="w-5 h-5 text-yellow-500" />
                         </div>

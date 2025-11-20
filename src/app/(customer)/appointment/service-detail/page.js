@@ -145,8 +145,8 @@ function ServiceDetailContent() {
 
             <div className="p-6">
                 {/* รูปภาพและชื่อบริการ */}
-                <div className="flex gap-3 mb-4">
-                    <div className="relative w-1/3 aspect-square rounded-xl overflow-hidden flex-shrink-0">
+                <div className="flex flex-col gap-3 mb-4">
+                    <div className="relative w-full h-24 aspect-square rounded-xl overflow-hidden flex-shrink-0">
                         <Image
                             src={service.imageUrl || 'https://via.placeholder.com/400x200'}
                             alt={service.serviceName}
@@ -159,7 +159,7 @@ function ServiceDetailContent() {
                     <div className="flex-1 flex flex-col justify-center">
                         <h1 className="text-md font-bold text-gray-800 leading-tight">{service.serviceName}</h1>
                          {/* แสดงราคาและระยะเวลาของบริการหลักเฉพาะเมื่อมีบริการเสริม */}
-                    {service.serviceType !== 'multi-area' && (service.addOnServices && service.addOnServices.length > 0) && (
+                         {service.serviceType !== 'multi-area' && (service.addOnServices && service.addOnServices.length > 0) && (
                         <div className="mb-3 p-3 bg-gray-50 rounded-lg">
                             <div className="text-xs text-gray-500 mb-1">บริการหลัก</div>
                             <div className="flex justify-between items-center">
