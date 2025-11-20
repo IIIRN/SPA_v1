@@ -33,6 +33,9 @@ export default function MyAppointmentsPage() {
     const [appointmentToCancel, setAppointmentToCancel] = useState(null);
     const [isCancelling, setIsCancelling] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
+    
+    // [DEBUG] State สำหรับเก็บข้อความ Debug
+    const [debugLog, setDebugLog] = useState(null);
 
     useEffect(() => {
         if (notification.show) {
@@ -47,18 +50,25 @@ export default function MyAppointmentsPage() {
             return;
         }
         setLoading(true);
+        
+        // [DEBUG] เริ่มดึงข้อมูล
+        // setDebugLog(`Fetching appointments for user: ${profile.userId}`);
+
         const appointmentsQuery = query(
             collection(db, 'appointments'),
             where("userId", "==", profile.userId),
             where("status", "in", ['awaiting_confirmation', 'confirmed', 'in_progress']),
             orderBy("appointmentInfo.dateTime", "asc")
         );
+        
         const unsubscribe = onSnapshot(appointmentsQuery, (snapshot) => {
             const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAppointments(docs);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching appointments:", error);
+            // [DEBUG] เก็บ Error ลง State
+            setDebugLog(`Firestore Snapshot Error: ${error.message || JSON.stringify(error)}`);
             setNotification({ show: true, title: 'Error', message: 'Could not fetch appointments.', type: 'error' });
             setLoading(false);
         });
@@ -76,6 +86,8 @@ export default function MyAppointmentsPage() {
                 setHistoryBookings(bookingsData);
             } catch (error) {
                 console.error("Error fetching booking history:", error);
+                // [DEBUG] เก็บ Error ลง State
+                setDebugLog(prev => (prev ? prev + "\n" : "") + `History Error: ${error.message}`);
             }
         };
         fetchHistory();
@@ -127,15 +139,25 @@ export default function MyAppointmentsPage() {
                     color="#553734" 
                     style={{ animationDuration: '3s' }}
                 />
+                <p className="mt-4 text-xs text-gray-400">Loading LIFF...</p>
             </div>
         );
     }
 
-    if (liffError) return <div className="p-4 text-center text-red-500">LIFF Error: {liffError}</div>;
+    // if (liffError) return <div className="p-4 text-center text-red-500">LIFF Error: {liffError}</div>;
 
     return (
-        <div>
+        <div className="pb-20"> {/* เพิ่ม padding bottom เผื่อ Debug bar บัง */}
             <CustomerHeader showBackButton={false} showActionButtons={true} />
+            
+            {/* [DEBUG] แสดง Error ของ LIFF ถ้ามี */}
+            {liffError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 m-4 rounded relative">
+                    <strong className="font-bold">LIFF Error: </strong>
+                    <span className="block sm:inline">{liffError}</span>
+                </div>
+            )}
+
             <div className="p-4 space-y-5">
             <Notification {...notification} />
             <ConfirmationModal
@@ -212,6 +234,42 @@ export default function MyAppointmentsPage() {
                 </div>
             )}
             </div>
+
+            {/* [DEBUG] Section แสดงผล Debug แบบหน้าจอ console */}
+            <div className="mx-4 mt-8 p-4 bg-black bg-opacity-90 rounded-lg text-xs font-mono text-green-400 break-words shadow-lg overflow-x-auto">
+                <h3 className="text-white font-bold border-b border-gray-600 pb-1 mb-2">🔧 Debug Info (On-Screen)</h3>
+                
+                <div className="mb-2">
+                    <span className="text-white">User ID:</span> {profile?.userId || <span className="text-red-500">Not Found</span>}
+                </div>
+                <div className="mb-2">
+                    <span className="text-white">Name:</span> {profile?.displayName || '-'}
+                </div>
+                <div className="mb-2">
+                    <span className="text-white">Appointments:</span> {appointments.length}
+                </div>
+                <div className="mb-2">
+                    <span className="text-white">LIFF Status:</span> {liffLoading ? 'Loading...' : 'Ready'} | {liffError ? 'Error' : 'OK'}
+                </div>
+
+                {/* แสดง Error Log ล่าสุด ถ้ามี */}
+                {debugLog && (
+                    <div className="mt-2 p-2 bg-red-900 bg-opacity-50 border border-red-500 rounded text-red-200">
+                        <strong>Last Error:</strong> {debugLog}
+                    </div>
+                )}
+
+                {/* ปุ่มสำหรับดู Raw JSON Profile */}
+                <details className="mt-2">
+                    <summary className="cursor-pointer text-blue-300 hover:text-blue-200">
+                        Show Full Profile JSON
+                    </summary>
+                    <pre className="mt-2 p-2 bg-gray-800 rounded text-gray-300 whitespace-pre-wrap">
+                        {JSON.stringify(profile, null, 2)}
+                    </pre>
+                </details>
+            </div>
+
         </div>
     );
 }
