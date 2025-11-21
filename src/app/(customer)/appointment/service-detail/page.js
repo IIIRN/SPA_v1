@@ -1,4 +1,3 @@
-// src/app/(customer)/appointment/service-detail/page.js
 "use client";
 
 import React, { useEffect, useState, useMemo, Suspense } from 'react';
@@ -214,7 +213,11 @@ function ServiceDetailContent() {
                                                         : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                                                 }`}
                                             >
-                                                <div className="font-medium">{pkg.duration} นาที</div>
+                                                {/* --- แก้ไข: แสดงชื่อแพคเกจ --- */}
+                                                <div className="font-medium">
+                                                    {pkg.name && <span className="font-bold block text-xs mb-0.5">{pkg.name}</span>}
+                                                    {pkg.duration} นาที
+                                                </div>
                                                 <div className="text-xs opacity-90">{pkg.price.toLocaleString()} {profile.currency}</div>
                                             </button>
                                         ))}
@@ -287,4 +290,3 @@ export default function ServiceDetailPage() {
         </Suspense>
     );
 }
-
