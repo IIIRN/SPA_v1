@@ -1,4 +1,3 @@
-// src/app/(admin)/create-appointment/page.js
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -371,7 +370,6 @@ export default function CreateAppointmentPage() {
 
     const availableTimeSlots = useMemo(() => {
         if (!appointmentDate || !bookingSettings?.timeQueues) {
-            console.log('No appointment date or timeQueues:', { appointmentDate, timeQueues: bookingSettings?.timeQueues });
             return [];
         }
 
@@ -379,32 +377,20 @@ export default function CreateAppointmentPage() {
         const dayOfWeek = selectedDate.getDay();
         const daySchedule = bookingSettings.weeklySchedule?.[dayOfWeek];
 
-        console.log('Checking time slots for:', {
-            selectedDate,
-            dayOfWeek,
-            daySchedule,
-            timeQueues: bookingSettings.timeQueues,
-            weeklySchedule: bookingSettings.weeklySchedule
-        });
-
         // ถ้าวันนี้เป็นวันหยุด ไม่ต้องแสดงช่วงเวลา
         const holiday = checkHolidayDate(selectedDate);
         if (holiday.isHoliday) {
-            console.log('Holiday detected:', holiday);
             return [];
         }
 
         // เช็คว่าวันนี้เปิดทำการหรือไม่
         if (!daySchedule?.isOpen) {
-            console.log('Day is not open:', dayOfWeek);
             return [];
         }
 
         // เช็คเวลาทำการ
         const openTime = daySchedule?.openTime?.replace(':', '') || '0900';
         const closeTime = daySchedule?.closeTime?.replace(':', '') || '1700';
-
-        console.log('Business hours:', { openTime, closeTime, daySchedule });
 
         // กรองเวลาที่อยู่ในช่วงเวลาทำการ
         const slots = bookingSettings.timeQueues
@@ -416,7 +402,6 @@ export default function CreateAppointmentPage() {
             .map(queue => queue.time)
             .sort();
 
-        console.log('Available time slots:', slots);
         setTimeQueueFull(slots.length === 0);
         return slots;
     }, [appointmentDate, bookingSettings]);
@@ -545,10 +530,12 @@ export default function CreateAppointmentPage() {
             if (selectedService.serviceType === 'multi-area' && selectedAreaIndex !== null && selectedPackageIndex !== null) {
                 const selectedArea = selectedService.areas?.[selectedAreaIndex] || null;
                 const selectedPackage = selectedArea?.packages?.[selectedPackageIndex] || null;
+                
                 serviceInfo.selectedArea = selectedArea || null;
                 serviceInfo.selectedPackage = selectedPackage || null;
                 serviceInfo.areaIndex = typeof selectedAreaIndex === 'number' ? selectedAreaIndex : null;
                 serviceInfo.packageIndex = typeof selectedPackageIndex === 'number' ? selectedPackageIndex : null;
+                
                 appointmentInfo.selectedArea = selectedArea || null;
                 appointmentInfo.selectedPackage = selectedPackage || null;
                 appointmentInfo.areaIndex = typeof selectedAreaIndex === 'number' ? selectedAreaIndex : null;
@@ -692,7 +679,11 @@ export default function CreateAppointmentPage() {
                                                                 className="h-4 w-4 text-blue-600"
                                                             />
                                                             <div className="flex-1">
-                                                                <div className="font-medium">{pkg.duration} นาที</div>
+                                                                {/* --- แก้ไขการแสดงผล: แสดงชื่อแพคเกจหากมี --- */}
+                                                                <div className="font-medium text-gray-900">
+                                                                    {pkg.name && <span className="font-bold text-indigo-600 mr-2">{pkg.name}</span>}
+                                                                    {pkg.duration} นาที
+                                                                </div>
                                                                 <div className="text-sm text-gray-600">{pkg.price.toLocaleString()} {profile.currencySymbol}</div>
                                                             </div>
                                                         </label>
@@ -780,14 +771,6 @@ export default function CreateAppointmentPage() {
                                                     startDate.setDate(startDate.getDate() - firstDay.getDay()); // เริ่มจากวันอาทิตย์
 
                                                     const days = [];
-
-                                                    console.log('Calendar setup:', {
-                                                        currentYear,
-                                                        currentMonth,
-                                                        firstDay: firstDay.toISOString(),
-                                                        lastDay: lastDay.toISOString(),
-                                                        startDate: startDate.toISOString()
-                                                    });
                                                     const today = new Date();
                                                     today.setHours(0, 0, 0, 0);                                            // Add empty cells for days before the first of the month
                                                     for (let i = 0; i < firstDay.getDay(); i++) {
@@ -1095,4 +1078,3 @@ export default function CreateAppointmentPage() {
         </div>
     );
 }
-
