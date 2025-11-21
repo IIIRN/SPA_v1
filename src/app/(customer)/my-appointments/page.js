@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/app/lib/firebase';
-import { collection, query, where, orderBy, onSnapshot, getDocs, disableNetwork, enableNetwork } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, disableNetwork, enableNetwork } from 'firebase/firestore'; // ตัด orderBy ออก
 import { useLiffContext } from '@/context/LiffProvider';
 import { Notification, ConfirmationModal } from '@/app/components/common/NotificationComponent';
 import { cancelAppointmentByUser, confirmAppointmentByUser } from '@/app/actions/appointmentActions';
@@ -52,8 +52,6 @@ export default function MyAppointmentsPage() {
             addLog("Manual Reset: Enabling Network...");
             await enableNetwork(db);
             addLog("Manual Reset: Done. Retrying fetch...");
-            // Trigger re-fetch by setting loading true? 
-            // Actually the onSnapshot should auto-reconnect, but let's force reload logic
             window.location.reload();
         } catch (e) {
             addLog(`Reset Error: ${e.message}`);
@@ -84,13 +82,13 @@ export default function MyAppointmentsPage() {
         }
         
         setLoading(true);
-        addLog("Start Firestore Query...");
+        addLog("Start Firestore Query (Simplified)...");
 
+        // [แก้ไขสำคัญ] ใช้ Query อย่างง่าย (Simple Query) เพื่อหลีกเลี่ยงปัญหา Missing Index และ Hang
         const appointmentsQuery = query(
             collection(db, 'appointments'),
-            where("userId", "==", profile.userId),
-            where("status", "in", ['awaiting_confirmation', 'confirmed', 'in_progress']),
-            orderBy("appointmentInfo.dateTime", "asc")
+            where("userId", "==", profile.userId)
+            // เอา where('status', 'in', ...) และ orderBy(...) ออกชั่วคราวเพื่อแก้ปัญหาค้าง
         );
 
         addLog("Attaching onSnapshot listener...");
@@ -98,29 +96,58 @@ export default function MyAppointmentsPage() {
             addLog(`Snapshot Received! Docs: ${snapshot.docs.length}`);
             addLog(`Metadata: FromCache=${snapshot.metadata.fromCache}`);
             
-            const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAppointments(docs);
+            const allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // [กรองและเรียงลำดับด้วย JS แทน Firestore]
+            const activeStatus = ['awaiting_confirmation', 'confirmed', 'in_progress'];
+            const filteredDocs = allDocs
+                .filter(doc => activeStatus.includes(doc.status))
+                .sort((a, b) => {
+                    // เรียงวันที่จากน้อยไปมาก (asc)
+                    const dateA = new Date(`${a.date}T${a.time}`);
+                    const dateB = new Date(`${b.date}T${b.time}`);
+                    return dateA - dateB;
+                });
+
+            setAppointments(filteredDocs);
             setLoading(false);
         }, (error) => {
             addLog(`Snapshot ERROR: ${error.message}`);
             console.error("Error fetching appointments:", error);
-            setNotification({ show: true, title: 'Error', message: 'Connection Error. Please retry.', type: 'error' });
+            // เช็คว่า Error เป็นเรื่อง Index หรือไม่
+            if (error.message.includes("index")) {
+                 setNotification({ show: true, title: 'System Error', message: 'Missing Index. Please contact admin.', type: 'error' });
+            } else {
+                 setNotification({ show: true, title: 'Error', message: 'Connection Error. Please retry.', type: 'error' });
+            }
             setLoading(false);
         });
         
         const fetchHistory = async () => {
             try {
-                addLog("Fetching History (getDocs)...");
+                addLog("Fetching History (Simplified getDocs)...");
+                // ใช้ Simple Query เช่นกันสำหรับ History
                 const bookingsQuery = query(
                     collection(db, 'appointments'),
-                    where("userId", "==", profile.userId),
-                    where("status", "in", ["completed", "cancelled"]),
-                    orderBy("appointmentInfo.dateTime", "desc")
+                    where("userId", "==", profile.userId)
                 );
                 const querySnapshot = await getDocs(bookingsQuery);
                 addLog(`History Fetched. Docs: ${querySnapshot.docs.length}`);
-                const bookingsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setHistoryBookings(bookingsData);
+                
+                const allHistoryDocs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // [กรองและเรียงลำดับด้วย JS]
+                const historyStatus = ["completed", "cancelled"];
+                const filteredHistory = allHistoryDocs
+                    .filter(doc => historyStatus.includes(doc.status))
+                    .sort((a, b) => {
+                         // เรียงวันที่จากมากไปน้อย (desc)
+                        const dateA = new Date(`${a.date}T${a.time}`);
+                        const dateB = new Date(`${b.date}T${b.time}`);
+                        return dateB - dateA;
+                    });
+
+                setHistoryBookings(filteredHistory);
             } catch (error) {
                 addLog(`History Error: ${error.message}`);
             }
@@ -247,7 +274,6 @@ export default function MyAppointmentsPage() {
                             style={{ animationDuration: '3s' }}
                         />
                         <p className="text-sm text-gray-400 mt-2">Loading data...</p>
-                        {/* Show Manual Retry if taking too long */}
                         <button 
                             onClick={handleResetConnection}
                             className="mt-4 text-xs text-blue-500 underline"
