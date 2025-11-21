@@ -23,23 +23,46 @@ function AdminLayoutContent({ children }) {
   const { showToast } = useToast();
 
   useEffect(() => {
+    let mounted = true;
+    
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (!mounted) return;
+      
       if (user) {
-        const adminDocRef = doc(db, 'admins', user.uid);
-        const adminDocSnap = await getDoc(adminDocRef);
-        if (adminDocSnap.exists()) {
-          setIsAuthorized(true);
-        } else {
-          router.push('/');
+        try {
+          const adminDocRef = doc(db, 'admins', user.uid);
+          const adminDocSnap = await getDoc(adminDocRef);
+          
+          if (!mounted) return;
+          
+          if (adminDocSnap.exists()) {
+            setIsAuthorized(true);
+          } else {
+            setIsAuthorized(false);
+            router.push('/');
+          }
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+          if (mounted) {
+            setIsAuthorized(false);
+            router.push('/');
+          }
         }
       } else {
-        router.push('/');
+        if (mounted) {
+          setIsAuthorized(false);
+          router.push('/');
+        }
       }
-      setLoading(false);
+      
+      if (mounted) {
+        setLoading(false);
+      }
     });
 
     const notifQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
     const unsubscribeNotifs = onSnapshot(notifQuery, (querySnapshot) => {
+        if (!mounted) return;
         const notifsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setNotifications(notifsData);
         const unread = notifsData.filter(n => !n.isRead).length;
@@ -47,6 +70,7 @@ function AdminLayoutContent({ children }) {
     });
 
     return () => {
+        mounted = false;
         unsubscribeAuth();
         unsubscribeNotifs();
     };

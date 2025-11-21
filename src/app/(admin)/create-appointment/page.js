@@ -393,7 +393,7 @@ export default function CreateAppointmentPage() {
         const closeTime = daySchedule?.closeTime?.replace(':', '') || '1700';
 
         // กรองเวลาที่อยู่ในช่วงเวลาทำการ
-        const slots = bookingSettings.timeQueues
+        let slots = bookingSettings.timeQueues
             .filter(queue => {
                 if (!queue?.time) return false;
                 const slotTime = queue.time.replace(':', '');
@@ -401,6 +401,15 @@ export default function CreateAppointmentPage() {
             })
             .map(queue => queue.time)
             .sort();
+
+        // ถ้าเป็นวันนี้ ให้กรองเฉพาะเวลาที่ยังไม่ผ่านมา
+        const today = new Date();
+        const isToday = appointmentDate === format(today, 'yyyy-MM-dd');
+        if (isToday) {
+            const now = new Date();
+            const currentTime = format(now, 'HH:mm');
+            slots = slots.filter(slot => slot > currentTime);
+        }
 
         setTimeQueueFull(slots.length === 0);
         return slots;
@@ -813,7 +822,7 @@ export default function CreateAppointmentPage() {
                                                                 disabled={isDisabled || isHoliday}
                                                                 className={`
                                                             w-full p-2 text-center rounded-md transition-colors
-                                                            ${isSelected ? 'bg-primary text-white shadow-md scale-95' : ''}
+                                                            ${isSelected ? 'bg-primary-dark text-white shadow-md scale-95' : ''}
                                                             ${!isSelected && isPast ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
                                                             ${!isSelected && isHoliday ? (holidayInfo?.reason === 'วันหยุดประจำสัปดาห์' ? 'weekly-holiday' : 'special-holiday') + ' cursor-not-allowed' : ''}
                                                             ${!isSelected && !isPast && !isHoliday && isDisabled ? 'bg-gray-100 text-gray-400' : ''}
@@ -883,7 +892,7 @@ export default function CreateAppointmentPage() {
                                                                         type="button"
                                                                         onClick={() => !isDisabled && setAppointmentTime(slot)}
                                                                         className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition-colors
-                                                            ${appointmentTime === slot ? 'bg-primary text-white shadow-lg' : 'bg-white text-primary border border-purple-100 hover:bg-purple-50'}
+                                                            ${appointmentTime === slot ? 'bg-primary-dark text-white shadow-lg' : 'bg-white text-primary border border-purple-100 hover:bg-purple-50'}
                                                             ${isDisabled ? 'opacity-40 cursor-not-allowed line-through' : ''}`}
                                                                         disabled={isDisabled}
                                                                         title={isFull ? 'คิวเต็ม' : isOverlapping ? 'เวลาทับซ้อนกับการจองอื่น' : ''}
@@ -1066,7 +1075,7 @@ export default function CreateAppointmentPage() {
                                 <button
                                     type="submit"
                                     disabled={isSubmitting || (usetechnician && !selectedtechnicianId)}
-                                    className="w-full bg-primary text-white p-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400"
+                                    className="w-full bg-primary-dark text-white p-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400"
                                 >
                                     {isSubmitting ? 'กำลังบันทึก...' : 'สร้างการนัดหมาย (รอการยืนยัน)'}
                                 </button>

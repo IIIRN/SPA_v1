@@ -26,15 +26,13 @@ function useClickOutside(ref, handler) {
 }
 
 const navLinks = [
+  { name: "ปฏิทิน", href: "/calendar" },
   { name: "แดชบอร์ด", href: "/dashboard" },
   {
     name: "ข้อมูลหลัก",
     items: [
-      // [!code focus start]
       { name: "สร้างการนัดหมาย", href: "/create-appointment" },
-      // [!code focus end]
       { name: "บริการ", href: "/services" },
-      { name: "ปฏิทิน", href: "/calendar" },
       { name: "ช่าง", href: "/technicians" },
       { name: "ลูกค้า", href: "/customers" },
     ]
@@ -69,7 +67,7 @@ const NavLink = ({ link, currentPath, onClick = () => {} }) => {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium flex items-center justify-between ${isActive ? "bg-slate-800 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+          className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium flex items-center justify-between ${isActive ? "bg-primary-dark text-white" : "text-gray-600 hover:bg-gray-100"}`}
         >
           {link.name}
           <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -96,7 +94,7 @@ const NavLink = ({ link, currentPath, onClick = () => {} }) => {
     <Link
       href={link.href}
       onClick={onClick}
-  className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${isActive ? "bg-slate-800 text-white font-bold" : "text-gray-600 hover:bg-gray-100"}`}
+  className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${isActive ? "bg-primary-dark text-white font-bold" : "text-gray-600 hover:bg-gray-100"}`}
     >
   {link.name}
     </Link>
@@ -166,7 +164,12 @@ export default function AdminNavbar() {
       clearTimeout(autoCloseTimeoutRef.current);
       autoCloseTimeoutRef.current = null;
     }
-    setIsNotifOpen(!isNotifOpen);
+    const newIsOpen = !isNotifOpen;
+    setIsNotifOpen(newIsOpen);
+    // ถ้าเปิดกล่องแจ้งเตือน ให้ทำเครื่องหมายว่าอ่านทั้งหมด
+    if (newIsOpen) {
+      markAllAsRead();
+    }
   };
 
   return (

@@ -1,21 +1,57 @@
 // src/app/page.js
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 // 1. Import Firebase functions ที่จำเป็น
 import { auth, db } from '@/app/lib/firebase';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(false);
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    // Load saved email from localStorage
+    const savedEmail = localStorage.getItem('adminEmail');
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Check if user is already logged in and is admin
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Check if user is admin
+        const adminDocRef = doc(db, 'admins', user.uid);
+        const adminDocSnap = await getDoc(adminDocRef);
+        if (adminDocSnap.exists()) {
+          router.push('dashboard');
+        } else {
+          setCheckingAuth(false);
+        }
+      } else {
+        setCheckingAuth(false);
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setEmail(value);
+    // Save email to localStorage
+    localStorage.setItem('adminEmail', value);
+  };
 
   const handleAdminLogin = async (e) => {
     e.preventDefault();
@@ -23,6 +59,10 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Set persistence based on rememberMe
+      const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+      await setPersistence(auth, persistence);
+
       // 2. ลองทำการ Sign in ด้วยอีเมลและรหัสผ่าน
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -78,6 +118,17 @@ export default function LoginPage() {
     }
   };
 
+  if (checkingAuth) {
+    return (
+      <main className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-800 mx-auto"></div>
+          <p className="mt-4 text-gray-600">กำลังตรวจสอบสถานะ...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow">
@@ -92,7 +143,7 @@ export default function LoginPage() {
                 name="email" 
                 id="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 placeholder="อีเมล"
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
@@ -110,6 +161,18 @@ export default function LoginPage() {
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 text-slate-600 focus:ring-slate-500 border-gray-300 rounded"
+              />
+              <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-900">
+                จดจำการเข้าสู่ระบบ
+              </label>
             </div>
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}
             <button 
