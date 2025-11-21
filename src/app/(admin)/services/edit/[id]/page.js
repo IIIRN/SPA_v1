@@ -29,20 +29,19 @@ export default function EditServicePage() {
           ...data,
           price: data.price?.toString() || '',
           duration: data.duration?.toString() || '',
-          basePrice: data.basePrice?.toString() || '',
           status: data.status || 'available',
+          completionNote: data.completionNote || '',
           addOnServices: (data.addOnServices || []).map(a => ({
             ...a,
             price: a.price?.toString() || '',
             duration: a.duration?.toString() || ''
           })),
-          areas: (data.areas || []).map(area => ({
-            ...area,
-            packages: (area.packages || []).map(pkg => ({
-              name: pkg.name || '', // --- แก้ไข: โหลดชื่อแพคเกจ (ถ้าไม่มีให้เป็นค่าว่าง) ---
-              duration: pkg.duration?.toString() || '',
-              price: pkg.price?.toString() || ''
-            }))
+          // --- โหลดข้อมูล Option-Based ---
+          selectableAreas: (data.selectableAreas || []).map(name => ({ name })),
+          serviceOptions: (data.serviceOptions || []).map(opt => ({
+            name: opt.name || '',
+            price: opt.price?.toString() || '',
+            duration: opt.duration?.toString() || ''
           }))
         });
       } else {
@@ -59,6 +58,7 @@ export default function EditServicePage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // --- Add-on Handlers ---
   const handleAddOnChange = (idx, field, value) => {
     setFormData(prev => {
       const addOnServices = [...(prev.addOnServices || [])];
@@ -82,50 +82,51 @@ export default function EditServicePage() {
     });
   };
 
-  const handleAddArea = () => {
+  // --- Option-Based Handlers (พื้นที่ที่เลือกได้) ---
+  const handleAddSelectableArea = () => {
     setFormData(prev => ({
       ...prev,
-      areas: [...(prev.areas || []), { name: '', packages: [{ name: '', duration: '', price: '' }] }]
+      selectableAreas: [...(prev.selectableAreas || []), { name: '' }]
     }));
   };
 
-  const handleRemoveArea = (idx) => {
+  const handleRemoveSelectableArea = (idx) => {
     setFormData(prev => {
-      const areas = [...(prev.areas || [])];
+      const areas = [...(prev.selectableAreas || [])];
       areas.splice(idx, 1);
-      return { ...prev, areas };
+      return { ...prev, selectableAreas: areas };
     });
   };
 
-  const handleAreaChange = (areaIdx, field, value) => {
+  const handleSelectableAreaChange = (idx, value) => {
     setFormData(prev => {
-      const areas = [...(prev.areas || [])];
-      areas[areaIdx][field] = value;
-      return { ...prev, areas };
+      const areas = [...(prev.selectableAreas || [])];
+      areas[idx].name = value;
+      return { ...prev, selectableAreas: areas };
     });
   };
 
-  const handleAddPackage = (areaIdx) => {
+  // --- Option-Based Handlers (ตัวเลือกแพ็กเกจ) ---
+  const handleAddServiceOption = () => {
+    setFormData(prev => ({
+      ...prev,
+      serviceOptions: [...(prev.serviceOptions || []), { name: '', duration: '', price: '' }]
+    }));
+  };
+
+  const handleRemoveServiceOption = (idx) => {
     setFormData(prev => {
-      const areas = [...(prev.areas || [])];
-      areas[areaIdx].packages = [...(areas[areaIdx].packages || []), { name: '', duration: '', price: '' }];
-      return { ...prev, areas };
+      const options = [...(prev.serviceOptions || [])];
+      options.splice(idx, 1);
+      return { ...prev, serviceOptions: options };
     });
   };
 
-  const handleRemovePackage = (areaIdx, pkgIdx) => {
+  const handleServiceOptionChange = (idx, field, value) => {
     setFormData(prev => {
-      const areas = [...(prev.areas || [])];
-      areas[areaIdx].packages.splice(pkgIdx, 1);
-      return { ...prev, areas };
-    });
-  };
-
-  const handlePackageChange = (areaIdx, pkgIdx, field, value) => {
-    setFormData(prev => {
-      const areas = [...(prev.areas || [])];
-      areas[areaIdx].packages[pkgIdx][field] = value;
-      return { ...prev, areas };
+      const options = [...(prev.serviceOptions || [])];
+      options[idx][field] = value;
+      return { ...prev, serviceOptions: options };
     });
   };
 
@@ -136,53 +137,51 @@ export default function EditServicePage() {
         showToast("กรุณากรอกชื่อบริการ ราคา และระยะเวลาให้ครบถ้วน", "error");
         return;
       }
-    } else {
-      if (!formData.serviceName || !formData.basePrice || !formData.areas?.length) {
-        showToast("กรุณากรอกชื่อบริการ ราคาฐาน และพื้นที่บริการอย่างน้อย 1 พื้นที่", "error");
+    } else if (serviceType === 'option-based') {
+      if (!formData.serviceName || !formData.selectableAreas?.length || !formData.serviceOptions?.length) {
+        showToast("กรุณากรอกชื่อบริการ พื้นที่ และตัวเลือกแพ็กเกจอย่างน้อย 1 รายการ", "error");
         return;
       }
-      for (const area of formData.areas) {
-        if (!area.name || !area.packages?.length) {
-          showToast("กรุณากรอกชื่อพื้นที่และแพ็คเกจให้ครบถ้วน", "error");
-          return;
-        }
-        for (const pkg of area.packages) {
-          // --- แก้ไข: ตรวจสอบชื่อแพคเกจ ---
-          if (!pkg.name || !pkg.duration || !pkg.price) {
-            showToast("กรุณากรอกชื่อแพคเกจ ระยะเวลา และราคาในทุกแพ็คเกจ", "error");
-            return;
-          }
-        }
+      // Validate details
+      for (const area of formData.selectableAreas) {
+          if (!area.name) { showToast("กรุณากรอกชื่อพื้นที่ให้ครบ", "error"); return; }
+      }
+      for (const opt of formData.serviceOptions) {
+          if (!opt.name || !opt.price || !opt.duration) { showToast("กรุณากรอกข้อมูลแพ็กเกจให้ครบ", "error"); return; }
       }
     }
+
     setLoading(true);
     try {
       const dataToSave = {
         serviceName: formData.serviceName,
         imageUrl: formData.imageUrl || '',
         details: formData.details || '',
+        completionNote: formData.completionNote?.trim() || '',
         addOnServices: (formData.addOnServices || []).map(a => ({ ...a, price: Number(a.price) || 0, duration: Number(a.duration) || 0 })),
         serviceType,
         status: formData.status,
       };
 
-      if (formData.completionNote && formData.completionNote.trim()) {
-        dataToSave.completionNote = formData.completionNote.trim();
-      }
-
       if (serviceType === 'single') {
         dataToSave.price = Number(formData.price) || 0;
         dataToSave.duration = Number(formData.duration) || 0;
-      } else {
-        dataToSave.basePrice = Number(formData.basePrice) || 0;
-        dataToSave.areas = formData.areas.map(area => ({
-          name: area.name,
-          packages: area.packages.map(pkg => ({
-            name: pkg.name, // --- แก้ไข: บันทึกชื่อแพคเกจ ---
-            duration: Number(pkg.duration) || 0,
-            price: Number(pkg.price) || 0
-          }))
+        // Clear option-based fields to keep DB clean
+        dataToSave.selectableAreas = [];
+        dataToSave.serviceOptions = [];
+      } else if (serviceType === 'option-based') {
+        dataToSave.selectableAreas = formData.selectableAreas.map(a => a.name);
+        dataToSave.serviceOptions = formData.serviceOptions.map(opt => ({
+            name: opt.name,
+            price: Number(opt.price) || 0,
+            duration: Number(opt.duration) || 0
         }));
+        
+        // Set base price/duration for display purposes (use min price)
+        const minPrice = Math.min(...dataToSave.serviceOptions.map(o => o.price));
+        const minDuration = Math.min(...dataToSave.serviceOptions.map(o => o.duration));
+        dataToSave.price = minPrice;
+        dataToSave.duration = minDuration;
       }
 
       const docRef = doc(db, 'services', id);
@@ -207,7 +206,7 @@ export default function EditServicePage() {
           <label className="block text-sm font-medium text-gray-700">ประเภทบริการ</label>
           <select value={serviceType} onChange={e => setServiceType(e.target.value)} className="w-full mt-1 p-2 border rounded-md">
             <option value="single">บริการเดี่ยว (ราคาและระยะเวลาคงที่)</option>
-            <option value="multi-area">บริการหลายพื้นที่ (เลือกพื้นที่และแพ็คเกจ)</option>
+            <option value="option-based">บริการเลือกพื้นที่ + ตัวเลือก (เช่น เลือกจุด + เลือกไซส์)</option>
           </select>
         </div>
         <div>
@@ -222,79 +221,90 @@ export default function EditServicePage() {
           </select>
         </div>
 
-        {serviceType === 'single' ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">ราคา ({profile.currencySymbol})</label>
-                <input type="number" name="price" value={formData.price} onChange={handleChange} placeholder="200" required className="w-full mt-1 p-2 border rounded-md" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">ระยะเวลา (นาที)</label>
-                <input type="number" name="duration" value={formData.duration} onChange={handleChange} placeholder="60" required className="w-full mt-1 p-2 border rounded-md" />
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
+        {serviceType === 'single' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">ราคาฐานต่อพื้นที่ ({profile.currencySymbol})</label>
-              <input type="number" name="basePrice" value={formData.basePrice} onChange={handleChange} placeholder="15000" required className="w-full mt-1 p-2 border rounded-md" />
+              <label className="block text-sm font-medium text-gray-700">ราคา ({profile.currencySymbol})</label>
+              <input type="number" name="price" value={formData.price} onChange={handleChange} placeholder="200" required className="w-full mt-1 p-2 border rounded-md" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">พื้นที่บริการ</label>
-              {(formData.areas || []).map((area, areaIdx) => (
-                <div key={areaIdx} className="border rounded-md p-4 mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <input
-                      type="text"
-                      placeholder="ชื่อพื้นที่ เช่น หน้าท้อง + เอว 2 ข้าง"
-                      value={area.name}
-                      onChange={e => handleAreaChange(areaIdx, 'name', e.target.value)}
-                      className="flex-1 p-2 border rounded-md mr-2"
-                      required
-                    />
-                    <button type="button" onClick={() => handleRemoveArea(areaIdx)} className="text-red-500 px-2">ลบพื้นที่</button>
-                  </div>
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">แพ็คเกจ</label>
-                    {area.packages.map((pkg, pkgIdx) => (
-                      <div key={pkgIdx} className="flex items-center gap-2 mb-2">
-                        {/* --- แก้ไข: เพิ่ม Input ชื่อแพคเกจ --- */}
-                        <input
-                          type="text"
-                          placeholder="ชื่อแพคเกจ (เช่น 1 ครั้ง)"
-                          value={pkg.name}
-                          onChange={e => handlePackageChange(areaIdx, pkgIdx, 'name', e.target.value)}
-                          className="flex-1 p-2 border rounded-md min-w-[120px]"
-                          required
-                        />
-                        <input
-                          type="number"
-                          placeholder="ระยะเวลา (นาที)"
-                          value={pkg.duration}
-                          onChange={e => handlePackageChange(areaIdx, pkgIdx, 'duration', e.target.value)}
-                          className="w-24 md:w-32 p-2 border rounded-md"
-                          required
-                        />
-                        <input
-                          type="number"
-                          placeholder={`ราคา (${profile.currencySymbol})`}
-                          value={pkg.price}
-                          onChange={e => handlePackageChange(areaIdx, pkgIdx, 'price', e.target.value)}
-                          className="w-24 md:w-32 p-2 border rounded-md"
-                          required
-                        />
-                        <button type="button" onClick={() => handleRemovePackage(areaIdx, pkgIdx)} className="text-red-500 px-2">ลบ</button>
-                      </div>
+              <label className="block text-sm font-medium text-gray-700">ระยะเวลา (นาที)</label>
+              <input type="number" name="duration" value={formData.duration} onChange={handleChange} placeholder="60" required className="w-full mt-1 p-2 border rounded-md" />
+            </div>
+          </div>
+        )}
+
+        {serviceType === 'option-based' && (
+          <div className="space-y-6 border-t pt-4">
+             {/* 1. Selectable Areas */}
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">1. พื้นที่ที่ลูกค้าเลือกได้ (Checkbox)</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {(formData.selectableAreas || []).map((area, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                             <span className="text-gray-400">□</span>
+                             <input 
+                                type="text" 
+                                placeholder="ชื่อพื้นที่ (เช่น หน้าท้อง)" 
+                                value={area.name} 
+                                onChange={(e) => handleSelectableAreaChange(idx, e.target.value)}
+                                className="flex-1 p-2 border rounded-md"
+                             />
+                             <button type="button" onClick={() => handleRemoveSelectableArea(idx)} className="text-red-500 px-2">ลบ</button>
+                        </div>
                     ))}
-                    <button type="button" onClick={() => handleAddPackage(areaIdx)} className="bg-gray-200 text-gray-700 px-3 py-1 rounded-md">+ เพิ่มแพ็คเกจ</button>
-                  </div>
                 </div>
-              ))}
-              <button type="button" onClick={handleAddArea} className="bg-blue-200 text-blue-700 px-3 py-2 rounded-md">+ เพิ่มพื้นที่</button>
-            </div>
-          </>
+                <button type="button" onClick={handleAddSelectableArea} className="mt-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-md">
+                    + เพิ่มพื้นที่
+                </button>
+             </div>
+
+             {/* 2. Service Options */}
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">2. ตัวเลือกราคาและเวลา (Option)</label>
+                <div className="space-y-3">
+                    {(formData.serviceOptions || []).map((opt, idx) => (
+                        <div key={idx} className="flex flex-wrap items-center gap-2 p-3 border rounded-lg bg-gray-50">
+                            <span className="text-gray-400">○</span>
+                            <div className="flex-1 min-w-[150px]">
+                                <label className="text-xs text-gray-500 block">ชื่อ Option (เช่น Size S)</label>
+                                <input 
+                                    type="text" 
+                                    value={opt.name} 
+                                    onChange={(e) => handleServiceOptionChange(idx, 'name', e.target.value)}
+                                    className="w-full p-2 border rounded-md"
+                                    placeholder="Size S"
+                                />
+                            </div>
+                            <div className="w-24">
+                                <label className="text-xs text-gray-500 block">เวลา (นาที)</label>
+                                <input 
+                                    type="number" 
+                                    value={opt.duration} 
+                                    onChange={(e) => handleServiceOptionChange(idx, 'duration', e.target.value)}
+                                    className="w-full p-2 border rounded-md"
+                                    placeholder="30"
+                                />
+                            </div>
+                            <div className="w-28">
+                                <label className="text-xs text-gray-500 block">ราคา/จุด</label>
+                                <input 
+                                    type="number" 
+                                    value={opt.price} 
+                                    onChange={(e) => handleServiceOptionChange(idx, 'price', e.target.value)}
+                                    className="w-full p-2 border rounded-md"
+                                    placeholder="5000"
+                                />
+                            </div>
+                            <button type="button" onClick={() => handleRemoveServiceOption(idx)} className="text-red-500 px-2 mt-4">ลบ</button>
+                        </div>
+                    ))}
+                </div>
+                <button type="button" onClick={handleAddServiceOption} className="mt-2 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2 rounded-md border border-indigo-200 border-dashed">
+                    + เพิ่ม Option (เช่น S, M, XL)
+                </button>
+             </div>
+          </div>
         )}
 
         <div>
@@ -303,21 +313,21 @@ export default function EditServicePage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">รายละเอียดเพิ่มเติม</label>
-          <textarea name="details" value={formData.details} onChange={handleChange} rows="3" placeholder="รายละเอียดบริการ เช่น ใช้ผลิตภัณฑ์อะไร ฯลฯ" className="w-full mt-1 p-2 border rounded-md"></textarea>
+          <textarea name="details" value={formData.details} onChange={handleChange} rows="3" placeholder="รายละเอียดบริการ" className="w-full mt-1 p-2 border rounded-md"></textarea>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">ข้อความหลังบริการเสร็จ</label>
           <textarea 
             name="completionNote" 
-            value={formData.completionNote || ''} 
+            value={formData.completionNote} 
             onChange={handleChange} 
             rows="2" 
-            placeholder="ข้อความที่จะส่งให้ลูกค้าเมื่อบริการเสร็จสิ้น เช่น ขอบคุณที่ใช้บริการ แนะนำให้ดูแลผิวด้วย..." 
+            placeholder="ข้อความส่งหาลูกค้าเมื่อจบงาน" 
             className="w-full mt-1 p-2 border rounded-md"
-           
           />
           <div className="text-xs text-gray-500 mt-1">{(formData.completionNote || '').length}/200 ตัวอักษร</div>
         </div>
+        
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">บริการเสริม</label>
           {(formData.addOnServices || []).map((addOn, idx) => (
@@ -348,6 +358,7 @@ export default function EditServicePage() {
           ))}
           <button type="button" onClick={handleAddAddOn} className="bg-gray-200 text-gray-700 px-3 py-1 rounded-md mt-2">+ เพิ่มบริการเสริม</button>
         </div>
+
         <button type="submit" disabled={loading} className="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 disabled:bg-gray-400">
           {loading ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
         </button>

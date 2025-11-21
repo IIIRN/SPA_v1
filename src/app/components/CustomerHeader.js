@@ -58,17 +58,17 @@ export default function CustomerHeader({ showBackButton = false, showActionButto
                 {/* ส่วนโปรไฟล์ซ้ายมือ */}
                 <div className="flex items-center gap-3">
                     {profile?.pictureUrl ? (
-                        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-sm">
+                        <div className="w-13 h-13 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20 shadow-sm">
                             <Image src={profile.pictureUrl} width={56} height={56} alt="Profile" className="w-full h-full object-cover" />
                         </div>
                     ) : (
-                        <div className="w-14 h-14 rounded-full bg-gray-800 flex-shrink-0 border-2 border-white/20 shadow-sm" />
+                        <div className="w-13 h-13 rounded-full bg-gray-800 flex-shrink-0 border-2 border-white/20 shadow-sm" />
                     )}
                     <div>
-                        <p className="text-sm text-primary-dark opacity-80">สวัสดี</p>
                         <p className="font-semibold text-primary-dark text-lg line-clamp-1">
                             {profile?.displayName || 'ผู้ใช้'}
                         </p>
+                       <p className="text-xs text-primary opacity-80"> SPA & MASSAGE ยินดีต้อนรับ</p>
                         {dbError && <p className="text-xs text-red-600 bg-white/80 px-1 rounded mt-1">{dbError}</p>}
                     </div>
                 </div>

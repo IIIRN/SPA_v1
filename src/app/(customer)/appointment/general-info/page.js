@@ -19,13 +19,23 @@ function GeneralInfoContent() {
     const router = useRouter();
     const { showToast, ToastComponent } = useToast();
 
+    // --- Params ---
     const serviceId = searchParams.get('serviceId');
     const addOnsParam = searchParams.get('addOns');
     const date = searchParams.get('date');
     const time = searchParams.get('time');
     const technicianId = searchParams.get('technicianId');
+    
+    // Legacy Params (Multi-Area)
     const areaIndex = searchParams.get('areaIndex') ? parseInt(searchParams.get('areaIndex')) : null;
     const packageIndex = searchParams.get('packageIndex') ? parseInt(searchParams.get('packageIndex')) : null;
+
+    // New Params (Option-Based)
+    const selectedOptionName = searchParams.get('selectedOptionName');
+    const selectedOptionPrice = searchParams.get('selectedOptionPrice') ? parseFloat(searchParams.get('selectedOptionPrice')) : 0;
+    const selectedOptionDuration = searchParams.get('selectedOptionDuration') ? parseInt(searchParams.get('selectedOptionDuration')) : 0;
+    const selectedAreasParam = searchParams.get('selectedAreas');
+    const selectedAreas = selectedAreasParam ? selectedAreasParam.split(',') : [];
 
     const [formData, setFormData] = useState({ fullName: "", phone: "", email: "", note: "" });
     const [service, setService] = useState(null);
@@ -88,20 +98,38 @@ function GeneralInfoContent() {
         let selectedAreaData = null;
         let selectedPackageData = null;
 
-        // Handle multi-area services
+        // 1. Multi-Area Logic (Legacy)
         if (service.serviceType === 'multi-area' && service.areas && service.areas.length > 0) {
             if (areaIndex !== null && service.areas[areaIndex]) {
                 selectedAreaData = service.areas[areaIndex];
                 base = selectedAreaData.price || 0;
                 duration = selectedAreaData.duration || 0;
 
-                // Handle packages within area
                 if (packageIndex !== null && selectedAreaData.packages && selectedAreaData.packages[packageIndex]) {
                     selectedPackageData = selectedAreaData.packages[packageIndex];
                     base = selectedPackageData.price || 0;
                     duration = selectedPackageData.duration || 0;
                 }
             }
+        } 
+        // 2. Option-Based Logic (New)
+        else if (service.serviceType === 'option-based') {
+            let unitPrice = selectedOptionPrice;
+            let unitDuration = selectedOptionDuration;
+
+            // ถ้ามีข้อมูล serviceOptions ให้ลองดึงราคาล่าสุด (กันราคาเปลี่ยน)
+            if (selectedOptionName && service.serviceOptions) {
+                const option = service.serviceOptions.find(o => o.name === selectedOptionName);
+                if (option) {
+                    unitPrice = option.price;
+                    unitDuration = option.duration;
+                }
+            }
+            
+            // สูตร: ราคาต่อหน่วย x จำนวนจุด
+            const areaCount = Math.max(1, selectedAreas.length);
+            base = unitPrice * areaCount;
+            duration = unitDuration * areaCount;
         }
 
         const addOnsPrice = (service.addOnServices || []).filter(a => selectedAddOns.includes(a.name)).reduce((sum, a) => sum + (a.price || 0), 0);
@@ -125,7 +153,7 @@ function GeneralInfoContent() {
             selectedPackage: selectedPackageData,
             totalDuration: duration + addOnsDuration
         };
-    }, [service, selectedAddOns, selectedCouponId, availableCoupons, areaIndex, packageIndex]);
+    }, [service, selectedAddOns, selectedCouponId, availableCoupons, areaIndex, packageIndex, selectedOptionName, selectedOptionPrice, selectedOptionDuration, selectedAreas]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -155,10 +183,14 @@ function GeneralInfoContent() {
                     name: service.serviceName,
                     imageUrl: service.imageUrl || '',
                     serviceType: service.serviceType,
+                    // Multi-area
                     selectedArea: selectedArea,
                     selectedPackage: selectedPackage,
                     areaIndex: areaIndex,
-                    packageIndex: packageIndex
+                    packageIndex: packageIndex,
+                    // Option-based
+                    selectedOptionName: selectedOptionName || null,
+                    selectedAreas: selectedAreas || [],
                 },
                 date: date,
                 time: time,
@@ -171,10 +203,14 @@ function GeneralInfoContent() {
                     dateTime: new Date(`${date}T${time}`),
                     addOns: (service.addOnServices || []).filter(a => selectedAddOns.includes(a.name)),
                     duration: totalDuration,
+                    // Multi-area
                     selectedArea: selectedArea,
                     selectedPackage: selectedPackage,
                     areaIndex: areaIndex,
-                    packageIndex: packageIndex
+                    packageIndex: packageIndex,
+                    // Option-based
+                    selectedOptionName: selectedOptionName || null,
+                    selectedAreas: selectedAreas || [],
                 },
                 paymentInfo: {
                     basePrice,
@@ -228,43 +264,62 @@ function GeneralInfoContent() {
             <ToastComponent />
             <CustomerHeader showBackButton={true} showActionButtons={false} />
             <div className="p-6">
-                <div className="bg-white rounded-2xl overflow-hidden mb-4">
+                <div className="bg-white rounded-2xl overflow-hidden mb-4 shadow-sm border border-gray-100">
                     <div className="p-4 border-b border-gray-100  text-black">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium">วันที่</span>
-                            <span className="text-sm font-semibold ">{date ? format(new Date(date), 'dd/MM/yyyy', { locale: th }) : '-'}</span>
+                            <span className="text-sm font-medium text-gray-600">วันที่</span>
+                            <span className="text-sm font-semibold text-gray-900">{date ? format(new Date(date), 'dd/MM/yyyy', { locale: th }) : '-'}</span>
                         </div>
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium ">เวลา</span>
-                            <span className="text-sm font-semibold">{time} น.</span>
+                            <span className="text-sm font-medium text-gray-600">เวลา</span>
+                            <span className="text-sm font-semibold text-gray-900">{time} น.</span>
                         </div>
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium">พนักงาน</span>
-                            <span className="text-sm font-semibold">{technician?.firstName === 'ระบบจัดให้' ? '-' : technician?.firstName}</span>
+                            <span className="text-sm font-medium text-gray-600">พนักงาน</span>
+                            <span className="text-sm font-semibold text-gray-900">{technician?.firstName === 'ระบบจัดให้' ? '-' : technician?.firstName}</span>
                         </div>
                     </div>
                     <div className="p-4 border-b border-gray-100  text-black">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium">บริการ</span>
-                            <div className="text-right">
-                                <div className="text-sm font-semibold">{service?.serviceName}</div>
+                        <div className="flex justify-between items-start mb-2">
+                            <span className="text-sm font-medium text-gray-600 pt-0.5">บริการ</span>
+                            <div className="text-right flex-1 pl-4">
+                                <div className="text-sm font-bold text-gray-900">{service?.serviceName}</div>
+                                
+                                {/* Multi-Area Display */}
                                 {selectedArea && (
                                     <div className="text-sm text-gray-600">{selectedArea.name}</div>
                                 )}
                                 {selectedPackage && (
                                     <div className="text-sm text-gray-600">{selectedPackage.name}</div>
                                 )}
-                                <div className="text-sm text-gray-500">
-                                    {service?.serviceType === 'multi-area' ? totalDuration : (service?.duration || 0)}นาที | {basePrice.toLocaleString()}
+
+                                {/* --- แก้ไข: Option-Based Display ให้แสดงรายละเอียดการคูณ --- */}
+                                {service?.serviceType === 'option-based' && (
+                                    <div className="mt-1">
+                                        <div className="text-sm text-gray-800 font-medium flex justify-end items-center gap-1">
+                                            <span>{selectedOptionName}</span>
+                                            <span className="text-xs text-gray-400">({shopProfile.currencySymbol}{selectedOptionPrice.toLocaleString()})</span>
+                                            <span>x {selectedAreas.length} จุด</span>
+                                        </div>
+                                        {selectedAreas.length > 0 && (
+                                            <div className="text-xs text-gray-500 leading-tight mt-0.5">
+                                                ({selectedAreas.join(', ')})
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="text-sm text-gray-500 mt-1">
+                                    {totalDuration} นาที | {basePrice.toLocaleString()} {shopProfile.currencySymbol}
                                 </div>
                             </div>
                         </div>
 
                         {selectedAddOns.length > 0 && (
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-medium text-primary">บริการเสริม</span>
-                                <div className="text-right">
-                                    <div className="text-sm font-semibold">
+                            <div className="flex justify-between items-start mb-2 mt-3 pt-3 border-t border-dashed border-gray-200">
+                                <span className="text-sm font-medium text-primary pt-0.5">บริการเสริม</span>
+                                <div className="text-right flex-1 pl-4">
+                                    <div className="text-sm font-semibold text-gray-800">
                                         {(service.addOnServices || [])
                                             .filter(a => selectedAddOns.includes(a.name))
                                             .map(a => a.name).join(', ')
@@ -274,12 +329,14 @@ function GeneralInfoContent() {
                                         {(service.addOnServices || [])
                                             .filter(a => selectedAddOns.includes(a.name))
                                             .reduce((sum, a) => sum + (a.duration || 0), 0)
-                                        }นาที | {addOnsTotal.toLocaleString()}
+                                        }นาที | {addOnsTotal.toLocaleString()} {shopProfile.currencySymbol}
                                     </div>
                                 </div>
                             </div>
                         )}
                     </div>
+                    
+                    {/* Coupon Section */}
                     {availableCoupons.length > 0 && (
                         <div className="p-4 border-b border-gray-100 ">
                             <button
@@ -293,104 +350,111 @@ function GeneralInfoContent() {
 
                             {showCoupon && (
                                 <div className="space-y-2 mt-3">
-                                    <div className="bg-gray-50 text-primary rounded-lg p-3">
-                                        <input
-                                            type="radio"
-                                            id="no-coupon"
-                                            name="coupon"
-                                            value=""
-                                            checked={selectedCouponId === ''}
-                                            onChange={(e) => setSelectedCouponId(e.target.value)}
-                                            className="mr-2"
-                                        />
-                                        <label htmlFor="no-coupon" className="text-sm">ไม่ใช้คูปอง</label>
-                                    </div>
-                                    {availableCoupons.map(coupon => (
-                                        <div key={coupon.id} className="bg-gray-50 text-primary rounded-lg p-3">
+                                    <div className="bg-gray-50 text-primary rounded-lg p-3 border border-gray-100">
+                                        <div className="flex items-center">
                                             <input
                                                 type="radio"
-                                                id={coupon.id}
+                                                id="no-coupon"
                                                 name="coupon"
-                                                value={coupon.id}
-                                                checked={selectedCouponId === coupon.id}
+                                                value=""
+                                                checked={selectedCouponId === ''}
                                                 onChange={(e) => setSelectedCouponId(e.target.value)}
                                                 className="mr-2"
                                             />
-                                            <label htmlFor={coupon.id} className="text-sm">
-                                                <div className="font-medium">{coupon.name}</div>
-                                                <div className="text-gray-500">
-                                                    ลด {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `${coupon.discountValue}${shopProfile.currencySymbol || '฿'}`}
-                                                </div>
-                                            </label>
+                                            <label htmlFor="no-coupon" className="text-sm">ไม่ใช้คูปอง</label>
+                                        </div>
+                                    </div>
+                                    {availableCoupons.map(coupon => (
+                                        <div key={coupon.id} className="bg-gray-50 text-primary rounded-lg p-3 border border-gray-100">
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    id={coupon.id}
+                                                    name="coupon"
+                                                    value={coupon.id}
+                                                    checked={selectedCouponId === coupon.id}
+                                                    onChange={(e) => setSelectedCouponId(e.target.value)}
+                                                    className="mr-2"
+                                                />
+                                                <label htmlFor={coupon.id} className="text-sm w-full">
+                                                    <div className="font-medium">{coupon.name}</div>
+                                                    <div className="text-gray-500 text-xs">
+                                                        ลด {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `${coupon.discountValue}${shopProfile.currencySymbol || '฿'}`}
+                                                    </div>
+                                                </label>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
                     )}
-                    <div className="p-4">
+                    <div className="p-4 bg-gray-50">
                         <div className="flex justify-between items-center">
-                            <span className="text-black font-semibold">รวม</span>
+                            <span className="text-black font-bold">ยอดสุทธิ</span>
                             <div className="text-right">
-                                <div className="text-black font-bold">
-                                    {totalDuration}นาที | {finalPrice.toLocaleString()} {shopProfile.currencySymbol || '฿'}
+                                <div className="text-md font-bold text-primary">
+                                    {finalPrice.toLocaleString()} {shopProfile.currencySymbol || '฿'}
                                 </div>
                                 {discount > 0 && (
-                                    <div className="text-sm text-green-600">ส่วนลด -{discount.toLocaleString()} {shopProfile.currencySymbol || '฿'}</div>
+                                    <div className="text-xs text-green-600 mt-1">ประหยัด {discount.toLocaleString()} {shopProfile.currencySymbol || '฿'}</div>
                                 )}
+                                <div className="text-xs text-gray-400 mt-0.5">รวมระยะเวลา {totalDuration} นาที</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white text-black rounded-2xl p-4 mb-4">
-                    <label className="block text-md text-center font-medium text-gray-700 mb-4">ข้อมูลลูกค้า</label>
+                <div className="bg-white text-black rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
+                    <label className="block text-lg text-center font-bold text-gray-800 mb-6">ข้อมูลลูกค้า</label>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className='flex items-center'>
-                            <label className="w-24 block text-sm font-medium text-gray-700">ชื่อ-สกุล</label>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ-สกุล</label>
                             <input
                                 type="text"
                                 name="fullName"
                                 value={formData.fullName}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50"
+                                placeholder="กรอกชื่อ-นามสกุล"
                                 required
                             />
                         </div>
 
-                        <div className='flex items-center'>
-                            <label className="w-24 block text-sm font-medium text-gray-700">เบอร์ติดต่อ</label>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์ติดต่อ</label>
                             <input
                                 type="tel"
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-500"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50"
+                                placeholder="กรอกเบอร์โทรศัพท์"
                                 required
                             />
                         </div>
 
-                        <div className='flex items-center'>
-                            <label className="w-24 block text-sm font-medium text-gray-700">อีเมล</label>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล (ถ้ามี)</label>
                             <input
                                 type="email"
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-500"
-
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50"
+                                placeholder="กรอกอีเมล"
                             />
                         </div>
 
-                        <div className='flex items-center'>
-                            <label className="w-24 block text-sm font-medium text-gray-700">เพิ่มเติม</label>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">ข้อความเพิ่มเติม</label>
                             <textarea
                                 name="note"
                                 value={formData.note}
                                 onChange={handleChange}
                                 rows={2}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none placeholder-gray-500"
-
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50 resize-none"
+                                placeholder="เช่น แพ้ยา, ขอหมอนเพิ่ม"
                             />
                         </div>
                     </form>
@@ -399,7 +463,7 @@ function GeneralInfoContent() {
                 <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="w-full bg-primary-dark text-white py-4 rounded-2xl font-semibold text-lg shadow-lg disabled:opacity-50"
+                    className="w-full bg-primary-dark hover:bg-primary text-white py-4 rounded-full font-bold text-lg shadow-lg disabled:opacity-50 transition-all transform active:scale-95"
                 >
                     {isSubmitting ? 'กำลังดำเนินการ...' : 'ยืนยันการนัดหมาย'}
                 </button>
@@ -412,7 +476,7 @@ export default function GeneralInfoPage() {
     return (
         <Suspense
             fallback={
-                <div className="flex flex-col items-center justify-center min-h-screen w-full">
+                <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gray-50">
                     <div className="p-4 text-center text-lg text-gray-500">กำลังโหลด...</div>
                 </div>
             }
@@ -421,4 +485,3 @@ export default function GeneralInfoPage() {
         </Suspense>
     );
 }
-

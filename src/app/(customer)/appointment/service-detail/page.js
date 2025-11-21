@@ -14,12 +14,12 @@ const AddOnCard = ({ addOn, isSelected, onToggle }) => {
     return (
         <div
             onClick={() => onToggle(addOn)}
-            className={`p-3 border rounded-lg flex items-center justify-between cursor-pointer transition-all text-sm ${isSelected ? 'bg-green-50 border-green-500 ring-2 ring-green-200' : 'bg-white'}`}
+            className={`p-3 border rounded-lg flex items-center justify-between cursor-pointer transition-all text-sm ${isSelected ? 'bg-green-50 border-primary-dark ring-2 ring-green-200' : 'bg-white'}`}
         >
             <div className="flex items-center w-full">
                 <span className="font-semibold text-gray-800 flex-1">{addOn.name}</span>
                 <span className="text-xs text-gray-700 ml-2 whitespace-nowrap">{addOn.duration} นาที | {profile.currency}{addOn.price?.toLocaleString()}</span>
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center ml-2 ${isSelected ? 'bg-green-500' : 'border'}`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center ml-2 ${isSelected ? 'bg-primary-dark' : 'border'}`}>
                     {isSelected && (
                         <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
@@ -36,9 +36,13 @@ function ServiceDetailContent() {
     const searchParams = useSearchParams();
     const serviceId = searchParams.get('id');
     const [service, setService] = useState(null);
+    
     const [selectedAddOns, setSelectedAddOns] = useState([]);
-    const [selectedAreaIndex, setSelectedAreaIndex] = useState(null);
-    const [selectedPackageIndex, setSelectedPackageIndex] = useState(null);
+    
+    // Option-Based States
+    const [selectedOptionIndex, setSelectedOptionIndex] = useState(null); 
+    const [selectedTargetAreas, setSelectedTargetAreas] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const { profile, loading: profileLoading } = useProfile();
 
@@ -53,7 +57,16 @@ function ServiceDetailContent() {
                 const docRef = doc(db, 'services', serviceId);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
-                    setService({ id: docSnap.id, ...docSnap.data() });
+                    const data = { id: docSnap.id, ...docSnap.data() };
+                    setService(data);
+
+                    // Auto select min price option
+                    if(data.serviceType === 'option-based' && data.serviceOptions?.length > 0) {
+                        const minPriceIndex = data.serviceOptions.reduce((minIndex, current, currentIndex, array) => {
+                            return current.price < array[minIndex].price ? currentIndex : minIndex;
+                        }, 0);
+                        setSelectedOptionIndex(minPriceIndex);
+                    }
                 } else {
                     router.push('/appointment');
                 }
@@ -78,55 +91,77 @@ function ServiceDetailContent() {
         });
     };
 
+    const toggleTargetArea = (areaName) => {
+        setSelectedTargetAreas(prev => {
+            if (prev.includes(areaName)) {
+                return prev.filter(a => a !== areaName);
+            } else {
+                return [...prev, areaName];
+            }
+        });
+    };
+
+    // --- คำนวณราคา (แก้ไขให้คูณจำนวนจุด) ---
     const totalPrice = useMemo(() => {
         let basePrice = 0;
         
-        if (service?.serviceType === 'multi-area') {
-            // สำหรับ multi-area service
-            if (selectedAreaIndex !== null && selectedPackageIndex !== null && service.areas?.[selectedAreaIndex]?.packages?.[selectedPackageIndex]) {
-                const selectedPackage = service.areas[selectedAreaIndex].packages[selectedPackageIndex];
-                basePrice = selectedPackage.price;
+        if (service?.serviceType === 'option-based') {
+            if (selectedOptionIndex !== null && service.serviceOptions?.[selectedOptionIndex]) {
+                const optionPrice = service.serviceOptions[selectedOptionIndex].price;
+                // สูตร: ราคา Option x จำนวนจุดที่เลือก (ถ้าไม่เลือกจุดเลย ให้คิดราคา 1 จุดไปก่อนเพื่อโชว์)
+                const multiplier = Math.max(1, selectedTargetAreas.length);
+                basePrice = optionPrice * multiplier;
             }
         } else {
-            // สำหรับ single service
             basePrice = service?.price || 0;
         }
         
         const addOnsPrice = selectedAddOns.reduce((total, addOn) => total + (addOn.price || 0), 0);
         return basePrice + addOnsPrice;
-    }, [service, selectedAddOns, selectedAreaIndex, selectedPackageIndex]);
+    }, [service, selectedAddOns, selectedOptionIndex, selectedTargetAreas]);
 
+    // --- คำนวณเวลา (แก้ไขให้คูณจำนวนจุด) ---
     const totalDuration = useMemo(() => {
         let baseDuration = 0;
         
-        if (service?.serviceType === 'multi-area') {
-            // สำหรับ multi-area service
-            if (selectedAreaIndex !== null && selectedPackageIndex !== null && service.areas?.[selectedAreaIndex]?.packages?.[selectedPackageIndex]) {
-                const selectedPackage = service.areas[selectedAreaIndex].packages[selectedPackageIndex];
-                baseDuration = selectedPackage.duration;
+        if (service?.serviceType === 'option-based') {
+            if (selectedOptionIndex !== null && service.serviceOptions?.[selectedOptionIndex]) {
+                const optionDuration = service.serviceOptions[selectedOptionIndex].duration;
+                // สูตร: เวลา Option x จำนวนจุดที่เลือก
+                const multiplier = Math.max(1, selectedTargetAreas.length);
+                baseDuration = optionDuration * multiplier;
             }
         } else {
-            // สำหรับ single service
             baseDuration = service?.duration || 0;
         }
         
         const addOnsDuration = selectedAddOns.reduce((total, addOn) => total + (addOn.duration || 0), 0);
         return baseDuration + addOnsDuration;
-    }, [service, selectedAddOns, selectedAreaIndex, selectedPackageIndex]);
+    }, [service, selectedAddOns, selectedOptionIndex, selectedTargetAreas]);
 
 
     const handleConfirm = () => {
         const params = new URLSearchParams();
         params.set('serviceId', service.id);
         
-        // สำหรับ multi-area service
-        if (service.serviceType === 'multi-area') {
-            if (selectedAreaIndex === null || selectedPackageIndex === null) {
-                alert('กรุณาเลือกพื้นที่และแพ็คเกจบริการ');
+        if (service.serviceType === 'option-based') {
+             if (selectedTargetAreas.length === 0) {
+                alert('กรุณาเลือกตำแหน่งอย่างน้อย 1 จุด');
                 return;
-            }
-            params.set('areaIndex', selectedAreaIndex.toString());
-            params.set('packageIndex', selectedPackageIndex.toString());
+             }
+             if (selectedOptionIndex === null) {
+                 alert('กรุณาเลือกแพ็คเกจ (Option)');
+                 return;
+             }
+             const opt = service.serviceOptions[selectedOptionIndex];
+             
+             // ส่งค่าพื้นฐานไป (ยังไม่คูณ) ให้หน้า General Info คำนวณ หรือส่งค่าที่คำนวณแล้วไปก็ได้
+             // เพื่อความชัวร์ ส่งค่า Unit Price ไป แล้วให้ General Info คูณเอง หรือส่งยอดสุทธิไปเลย
+             // ในที่นี้จะส่ง Unit Price และ Areas ไปครับ
+             params.set('selectedOptionName', opt.name);
+             params.set('selectedOptionPrice', opt.price.toString());
+             params.set('selectedOptionDuration', opt.duration.toString());
+             params.set('selectedAreas', selectedTargetAreas.join(','));
         }
         
         if (selectedAddOns.length > 0) {
@@ -143,7 +178,7 @@ function ServiceDetailContent() {
             <CustomerHeader showBackButton={true} showActionButtons={false} />
 
             <div className="p-6">
-                {/* รูปภาพและชื่อบริการ */}
+                {/* Header Image & Title */}
                 <div className="flex flex-col gap-3 mb-4">
                     <div className="relative w-full h-24 aspect-square rounded-xl overflow-hidden flex-shrink-0">
                         <Image
@@ -157,10 +192,8 @@ function ServiceDetailContent() {
                     </div>
                     <div className="flex-1 flex flex-col justify-center">
                         <h1 className="text-md font-bold text-gray-800 leading-tight">{service.serviceName}</h1>
-                         {/* แสดงราคาและระยะเวลาของบริการหลักเฉพาะเมื่อมีบริการเสริม */}
-                         {service.serviceType !== 'multi-area' && (service.addOnServices && service.addOnServices.length > 0) && (
-                        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
-                            <div className="text-xs text-gray-500 mb-1">บริการหลัก</div>
+                         {service.serviceType === 'single' && (
+                        <div className="mb-3 p-3 bg-gray-50 rounded-lg mt-2">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-gray-600">ระยะเวลา</span>
                                 <span className="text-sm text-gray-800">{service.duration} นาที</span>
@@ -174,86 +207,93 @@ function ServiceDetailContent() {
                     </div>
                 </div>
 
-                {/* ชื่อและราคาบริการ */}
+                {/* Option-Based UI */}
                 <div className="mb-2">
-                    
-                    {service.serviceType === 'multi-area' ? (
-                        <div className="mb-4">
-                            <h2 className="text-sm font-semibold mb-2 text-gray-700">เลือกพื้นที่บริการ</h2>
-                            <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
-                                {service.areas?.map((area, areaIdx) => (
-                                    <button
-                                        key={areaIdx}
-                                        onClick={() => {
-                                            setSelectedAreaIndex(areaIdx);
-                                            setSelectedPackageIndex(null);
-                                        }}
-                                        className={`px-4 py-2 border rounded-full whitespace-nowrap text-sm font-medium transition-all flex-shrink-0 ${
-                                            selectedAreaIndex === areaIdx 
-                                                ? 'bg-primary text-white border-primary shadow-md' 
-                                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        {area.name}
-                                    </button>
-                                ))}
-                            </div>
-                            
-                            {selectedAreaIndex !== null && service.areas[selectedAreaIndex]?.packages && (
-                                <div className="mb-3">
-                                    <h3 className="text-sm font-semibold mb-2 text-gray-700">เลือกแพ็คเกจ</h3>
-                                    <div className="flex gap-2 overflow-x-auto pb-2">
-                                        {service.areas[selectedAreaIndex].packages.map((pkg, pkgIdx) => (
-                                            <button
-                                                key={pkgIdx}
-                                                onClick={() => setSelectedPackageIndex(pkgIdx)}
-                                                className={`px-4 py-2.5 border rounded-lg whitespace-nowrap text-sm font-medium transition-all flex-shrink-0 ${
-                                                    selectedPackageIndex === pkgIdx
-                                                        ? 'bg-primary text-white border-primary shadow-md'
-                                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                                                }`}
+                    {service.serviceType === 'option-based' && (
+                        <div className="mb-6 space-y-6">
+                            {/* 1. เลือกตำแหน่ง (Checkbox) */}
+                            <div>
+                                <h2 className="text-sm font-semibold mb-2 text-gray-700 flex items-center justify-between">
+                                    เลือกตำแหน่ง 
+                                    {selectedTargetAreas.length > 0 && <span className="text-xs font-normal text-primary-dark   px-2 py-0.5 rounded-full">เลือก {selectedTargetAreas.length} จุด</span>}
+                                </h2>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {service.selectableAreas?.map((areaName, idx) => {
+                                        const isSelected = selectedTargetAreas.includes(areaName);
+                                        return (
+                                            <div 
+                                                key={idx} 
+                                                onClick={() => toggleTargetArea(areaName)}
+                                                className={`p-3 border rounded-lg flex items-center gap-2 cursor-pointer transition-all text-sm ${isSelected ? 'bg-green-50 border-primary-dark ring-1 ring-primary-dark' : 'bg-white'}`}
                                             >
-                                                {/* --- แก้ไข: แสดงชื่อแพคเกจ --- */}
-                                                <div className="font-medium">
-                                                    {pkg.name && <span className="font-bold block text-xs mb-0.5">{pkg.name}</span>}
-                                                    {pkg.duration} นาที
+                                                 <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-primary-dark border-primary-dark' : 'border-gray-300 bg-white'}`}>
+                                                    {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>}
                                                 </div>
-                                                <div className="text-xs opacity-90">{pkg.price.toLocaleString()} {profile.currency}</div>
-                                            </button>
-                                        ))}
-                                    </div>
+                                                <span className={`flex-1 ${isSelected ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{areaName}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            )}
-                        </div>
-                    ) : null}
+                            </div>
 
-                   
-                    
-                    <div className="flex items-center justify-between">
+                            {/* 2. เลือกแพ็คเกจ (Radio) */}
+                            <div>
+                                <h2 className="text-sm font-semibold mb-2 text-gray-700">เลือกแพ็คเกจ (ราคาต่อจุด)</h2>
+                                <div className="space-y-2">
+                                    {service.serviceOptions?.map((opt, idx) => {
+                                        const isSelected = selectedOptionIndex === idx;
+                                        return (
+                                            <div 
+                                                key={idx}
+                                                onClick={() => setSelectedOptionIndex(idx)}
+                                                className={`p-3 border rounded-lg flex items-center justify-between cursor-pointer transition-all text-sm ${isSelected ? 'bg-green-50 border-primary-dark ring-2 ring-primary' : 'bg-white'}`}
+                                            >
+                                                <div className="flex items-center gap-3 w-full">
+                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-primary-dark' : 'border-gray-400'}`}>
+                                                        {isSelected && <div className="w-2 h-2 rounded-full bg-primary-dark"></div>}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className={`font-semibold ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>{opt.name}</div>
+                                                        <div className="text-xs text-gray-500">{opt.duration} นาที/จุด</div>
+                                                    </div>
+                                                    <div className="font-bold text-primary-dark">
+                                                        {profile.currency}{opt.price.toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* สรุปยอด */}
+                    <div className="flex items-center justify-between border-t pt-4 mt-4">
                         <div>
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="flex justify-between items-center mb-1">
                                 <span className="text-sm font-bold text-gray-600 pr-4">ระยะเวลารวม</span>
                                 <span className="text-sm font-bold text-gray-800">{totalDuration} นาที</span>
                             </div>
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="flex justify-between items-center">
                                 <span className="text-sm font-bold text-gray-600 pr-4">ราคารวม</span>
-                                <span className="text-sm font-bold text-gray-800">{profile.currency}{totalPrice.toLocaleString()}</span>
+                                <span className="text-lg font-bold text-primary-dark">{profile.currency}{totalPrice.toLocaleString()}</span>
                             </div>
                         </div>
                         <button 
                             onClick={handleConfirm} 
-                            className="w-1/3 bg-primary-dark hover:bg-primary text-white py-3 rounded-full font-bold text-base transition-colors"
-                            disabled={service.serviceType === 'multi-area' && (selectedAreaIndex === null || selectedPackageIndex === null)}
+                            className="w-1/3 bg-primary-dark hover:bg-black text-white py-3 rounded-full font-bold text-base transition-colors shadow-md disabled:bg-gray-300 disabled:shadow-none"
+                            disabled={service.serviceType === 'option-based' && (selectedTargetAreas.length === 0 || selectedOptionIndex === null)}
                         >
                             จองบริการ
                         </button>
                     </div>
                 </div>
 
-                {/* Add-on Services */}
+                {/* Add-ons */}
                 {(service.addOnServices && service.addOnServices.length > 0) && (
-                    <div className="py-2">
-                        <h2 className="text-sm font-bold mb-1">รายการเสริม</h2>
+                    <div className="py-4 border-t mt-2">
+                        <h2 className="text-sm font-bold mb-2">รายการเสริม</h2>
                         <div className="space-y-2">
                             {service.addOnServices.map((addOn, idx) => (
                                 <AddOnCard
@@ -267,11 +307,11 @@ function ServiceDetailContent() {
                     </div>
                 )}
 
-                {/* รายละเอียดบริการ */}
+                {/* Details */}
                 {service.details && (
-                    <div className="py-2 mt-4">
+                    <div className="py-2 mt-2">
                         <h2 className="text-sm font-bold mb-2">รายละเอียดบริการ</h2>
-                        <p className="text-gray-600 text-sm" style={{ whiteSpace: 'pre-line' }}>
+                        <p className="text-gray-600 text-sm leading-relaxed" style={{ whiteSpace: 'pre-line' }}>
                             {service.details}
                         </p>
                     </div>
@@ -281,7 +321,6 @@ function ServiceDetailContent() {
         </div>
     );
 }
-
 
 export default function ServiceDetailPage() {
     return (

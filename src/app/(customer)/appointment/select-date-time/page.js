@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from 'react'; // Import useCallback
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where, orderBy, doc, getDoc } from 'firebase/firestore';
@@ -9,8 +9,9 @@ import { format } from 'date-fns';
 import Image from 'next/image';
 import CustomerHeader from '@/app/components/CustomerHeader';
 import { useToast } from '@/app/components/common/Toast';
+import { useProfile } from '@/context/ProfileProvider'; // Import Profile Context เพื่อใช้สกุลเงิน
 
-// --- Technician Card Component (ได้รับการแก้ไข) ---
+// --- Technician Card Component ---
 const TechnicianCard = ({ technician, isSelected, onSelect, isAvailable }) => (
     <div
         onClick={() => isAvailable && onSelect(technician)}
@@ -42,25 +43,25 @@ const TechnicianCard = ({ technician, isSelected, onSelect, isAvailable }) => (
     </div>
 );
 
-// --- Time Slot Component (คงเดิม) ---
-const TimeSlot = ({ time, isSelected, onSelect }) => (
-    <button
-        onClick={() => onSelect(time)}
-        className={`rounded-lg px-4 py-2 transition-colors text-sm font-semibold ${isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-    >
-        {time}
-    </button>
-);
-
-
 function SelectDateTimeContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { profile } = useProfile();
+    const { showToast, ToastComponent } = useToast();
+
+    // Params
     const serviceId = searchParams.get('serviceId');
     const addOns = searchParams.get('addOns');
+    
+    // Legacy Params (Multi-Area)
     const areaIndex = searchParams.get('areaIndex');
     const packageIndex = searchParams.get('packageIndex');
-    const { showToast, ToastComponent } = useToast();
+
+    // New Params (Option-Based) --- เพิ่มส่วนนี้ ---
+    const selectedOptionName = searchParams.get('selectedOptionName');
+    const selectedOptionPrice = searchParams.get('selectedOptionPrice');
+    const selectedOptionDuration = searchParams.get('selectedOptionDuration');
+    const selectedAreasParam = searchParams.get('selectedAreas'); // รับ string เช่น "หน้าท้อง,ต้นขา"
 
     const [service, setService] = useState(null);
     const [selectedAddOns, setSelectedAddOns] = useState([]);
@@ -105,7 +106,7 @@ function SelectDateTimeContent() {
         fetchService();
     }, [serviceId]);
 
-    // Process add-ons from URL params
+    // Process add-ons
     useEffect(() => {
         if (!service || !addOns) return;
         
@@ -157,7 +158,7 @@ function SelectDateTimeContent() {
         fetchBookingSettings();
     }, []);
 
-    // Fetch appointment counts for the selected date and update technician availability
+    // Fetch appointments & Calculate availability
     useEffect(() => {
         if (!date) return;
 
@@ -171,7 +172,6 @@ function SelectDateTimeContent() {
             const querySnapshot = await getDocs(q);
             const appointmentsForDay = querySnapshot.docs.map(doc => doc.data());
             
-            // Calculate total bookings for each time slot
             const counts = {};
             appointmentsForDay.forEach(appt => {
                 if (appt.time) {
@@ -180,8 +180,6 @@ function SelectDateTimeContent() {
             });
             setSlotCounts(counts);
 
-            // คำนวณช่วงเวลาที่ทับซ้อนกัน (Time Overlap Detection)
-            // เก็บจำนวนการทับซ้อนจากช่วงเวลาอื่น (ไม่นับเวลาเริ่มต้น)
             const slotOverlapCounts = {};
             const unavailable = new Set();
             const bufferTime = bufferMinutes || 0;
@@ -191,6 +189,7 @@ function SelectDateTimeContent() {
                 
                 const [hours, minutes] = appt.time.split(':').map(Number);
                 const startMinutes = hours * 60 + minutes;
+                // ใช้ค่า duration จากการนัดหมายนั้นๆ
                 const duration = appt.serviceInfo.duration || appt.appointmentInfo?.duration || 60;
                 const endMinutes = startMinutes + duration + bufferTime;
                 
@@ -199,14 +198,12 @@ function SelectDateTimeContent() {
                     const [qHours, qMinutes] = queue.time.split(':').map(Number);
                     const qTimeMinutes = qHours * 60 + qMinutes;
                     
-                    // นับเฉพาะช่วงเวลาที่ทับซ้อน (ไม่ใช่เวลาเริ่มต้น) เพื่อไม่ให้นับซ้ำ
                     if (qTimeMinutes > startMinutes && qTimeMinutes < endMinutes) {
                         slotOverlapCounts[queue.time] = (slotOverlapCounts[queue.time] || 0) + 1;
                     }
                 });
             });
             
-            // ตรวจสอบว่าช่วงเวลาไหนที่มีการทับซ้อนเต็มทุกคิว
             timeQueues.forEach(queue => {
                 if (!queue.time) return;
                 const maxSlots = useTechnician ? technicians.length : (queue.count || totalTechnicians);
@@ -220,7 +217,6 @@ function SelectDateTimeContent() {
             
             setUnavailableSlots(unavailable);
 
-            // Update unavailable technicians for the selected time
             if (time) {
                 const unavailableIds = new Set(
                     appointmentsForDay
@@ -229,7 +225,6 @@ function SelectDateTimeContent() {
                 );
                 setUnavailableTechnicianIds(unavailableIds);
 
-                // If currently selected technician becomes unavailable, deselect them
                 if (selectedTechnician && unavailableIds.has(selectedTechnician.id)) {
                     setSelectedTechnician(null);
                     showToast('ช่างที่เลือกไม่ว่างในเวลานี้แล้ว', 'warning', 'โปรดเลือกช่างใหม่');
@@ -242,13 +237,12 @@ function SelectDateTimeContent() {
         fetchAppointmentsForDate();
     }, [date, time, selectedTechnician, showToast, timeQueues, bufferMinutes, useTechnician, technicians, totalTechnicians]);
     
-    // Reset time and technician when date changes
     useEffect(() => {
         setTime('');
         setSelectedTechnician(null);
     }, [date]);
     
-
+    // --- แก้ไข: ส่งค่า params ทั้งหมดต่อไปยังหน้า General Info ---
     const handleConfirm = () => {
         if (!date || !time) {
             showToast('กรุณาเลือกวันและเวลาที่ต้องการจอง', "warning", "ข้อมูลไม่ครบถ้วน");
@@ -263,8 +257,17 @@ function SelectDateTimeContent() {
         const params = new URLSearchParams();
         if (serviceId) params.set('serviceId', serviceId);
         if (addOns) params.set('addOns', addOns);
+        
+        // Legacy Params
         if (areaIndex !== null) params.set('areaIndex', areaIndex);
         if (packageIndex !== null) params.set('packageIndex', packageIndex);
+
+        // Option-Based Params (ส่งต่อ)
+        if (selectedOptionName) params.set('selectedOptionName', selectedOptionName);
+        if (selectedOptionPrice) params.set('selectedOptionPrice', selectedOptionPrice);
+        if (selectedOptionDuration) params.set('selectedOptionDuration', selectedOptionDuration);
+        if (selectedAreasParam) params.set('selectedAreas', selectedAreasParam);
+
         params.set('date', format(date, 'yyyy-MM-dd'));
         params.set('time', time);
         
@@ -312,9 +315,9 @@ function SelectDateTimeContent() {
             {/* Service Summary */}
             {service && (
                 <div className="w-full max-w-md mx-auto mb-6">
-                    <div className="bg-white rounded-2xl p-4 border border-primary">
+                    <div className="bg-white rounded-2xl p-4 border border-primary shadow-sm">
                         <div className="flex items-center gap-3">
-                            <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                            <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
                                 <Image
                                     src={service.imageUrl || 'https://via.placeholder.com/150'}
                                     alt={service.serviceName}
@@ -322,23 +325,47 @@ function SelectDateTimeContent() {
                                     style={{ objectFit: 'cover' }}
                                 />
                             </div>
-                            <div className="flex-1">
-                                <h3 className="text-md font-bold text-primary-dark">{service.serviceName}</h3>
+                            <div className="flex-1 overflow-hidden">
+                                <h3 className="text-md font-bold text-gray-900 truncate">{service.serviceName}</h3>
+                                
+                                {/* แสดงรายละเอียด Option-Based */}
+                                {service.serviceType === 'option-based' && selectedOptionName && (
+                                    <div className="mt-1">
+                                        <p className="text-sm font-medium text-primary-dark">
+                                            {selectedOptionName} 
+                                            <span className="text-xs text-gray-500 ml-1">
+                                                 x {selectedAreasParam ? selectedAreasParam.split(',').length : 0} จุด
+                                            </span>
+                                        </p>
+                                        {selectedAreasParam && (
+                                            <p className="text-xs text-gray-500 truncate">
+                                                ({selectedAreasParam})
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* แสดงรายละเอียด Multi-Area (Legacy) */}
                                 {service.serviceType === 'multi-area' && areaIndex !== null && packageIndex !== null && service.areas?.[areaIndex] && (
                                     <p className="text-sm text-gray-600">
                                         {service.areas[areaIndex].name} - {service.areas[areaIndex].packages[packageIndex].duration} นาที
                                     </p>
                                 )}
+                                
+                                {/* แสดงรายละเอียด Single */}
+                                {service.serviceType === 'single' && (
+                                    <p className="text-sm text-gray-600">
+                                        {service.duration} นาที | {profile?.currency}{service.price?.toLocaleString()}
+                                    </p>
+                                )}
                             </div>
                         </div>
-                        
-                    
                     </div>
                 </div>
             )}
             
             {/* Calendar */}
-            <div className="w-full bg-white/30 border border-primary p-4 rounded-2xl max-w-md mx-auto flex flex-col items-center">
+            <div className="w-full bg-white/50 border border-primary p-4 rounded-2xl max-w-md mx-auto flex flex-col items-center shadow-sm backdrop-blur-sm">
                 <div className="flex items-center justify-between w-full mb-4">
                     <button
                         onClick={() => setActiveMonth(prev => {
@@ -346,7 +373,7 @@ function SelectDateTimeContent() {
                             d.setMonth(d.getMonth() - 1);
                             return d;
                         })}
-                        className="px-3 py-2 text-xl text-primary hover:text-primary"
+                        className="px-3 py-2 text-xl text-primary hover:bg-purple-50 rounded-full transition-colors"
                     >&#60;</button>
                     <span className="font-bold text-lg text-primary">
                         {activeMonth.toLocaleString('th-TH', { month: 'long', year: 'numeric' })}
@@ -357,7 +384,7 @@ function SelectDateTimeContent() {
                             d.setMonth(d.getMonth() + 1);
                             return d;
                         })}
-                        className="px-3 py-2 text-xl text-primary hover:text-primary"
+                        className="px-3 py-2 text-xl text-primary hover:bg-purple-50 rounded-full transition-colors"
                     >&#62;</button>
                 </div>
                 <div className="w-full">
@@ -374,14 +401,13 @@ function SelectDateTimeContent() {
                             const year = activeMonth.getFullYear();
                             const month = activeMonth.getMonth();
                             const firstDay = new Date(year, month, 1);
-                            const lastDay = new Date(year, month + 1, 0);
+                            // const lastDay = new Date(year, month + 1, 0); // Unused
                             const startDate = new Date(firstDay);
-                            startDate.setDate(startDate.getDate() - firstDay.getDay()); // เริ่มจากวันอาทิตย์
+                            startDate.setDate(startDate.getDate() - firstDay.getDay()); 
                             
                             const days = [];
                             const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 7, 0, 0);
                             
-                            // สร้างปฏิทิน 6 สัปดาห์ (42 วัน)
                             for (let i = 0; i < 42; i++) {
                                 const d = new Date(currentDate);
                                 const isCurrentMonth = d.getMonth() === month;
@@ -390,7 +416,6 @@ function SelectDateTimeContent() {
                                 const isPast = d < new Date(new Date().setHours(0,0,0,0));
                                 const isBusinessOpen = isDateOpen(d);
                                 
-                                // ตรวจสอบวันหยุดพิเศษ
                                 const dateStr = format(d, 'yyyy-MM-dd');
                                 const holidayInfo = holidayDates.find(holiday => holiday.date === dateStr);
                                 const isHoliday = !!holidayInfo;
@@ -401,32 +426,20 @@ function SelectDateTimeContent() {
                                     <button
                                         key={i}
                                         onClick={() => !isDisabled && setDate(d)}
-                                        className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors relative
+                                        className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold transition-all relative
                                             ${!isCurrentMonth ? 'text-gray-300' : 
-                                              isSelected ? 'bg-primary-dark text-white shadow-lg' : 
+                                              isSelected ? 'bg-primary-dark text-white shadow-md transform scale-105' : 
                                               isToday ? 'border-2 border-primary text-primary bg-white' : 
-                                              isHoliday ? 'bg-red-100 text-red-600 border border-red-300' :
-                                              'bg-white text-primary hover:bg-purple-50'}
-                                            ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}
-                                            ${!isBusinessOpen && !isPast && isCurrentMonth ? 'bg-gray-200 text-gray-400' : ''}
+                                              isHoliday ? 'bg-red-50 text-red-400 border border-red-100' :
+                                              'bg-red-50 text-gray-700 hover:bg-purple-50 border border-transparent hover:border-purple-100'}
+                                            ${isDisabled ? 'opacity-30 cursor-not-allowed' : ''}
+                                            ${!isBusinessOpen && !isPast && isCurrentMonth ? 'bg-gray-100 text-gray-400' : ''}
                                         `}
                                         disabled={isDisabled}
-                                        title={
-                                            isHoliday && holidayInfo?.note 
-                                                ? `วันหยุด: ${holidayInfo.note}` 
-                                                : !isBusinessOpen && !isPast && isCurrentMonth 
-                                                ? 'วันปิดทำการ' 
-                                                : ''
-                                        }
                                     >
                                         {d.getDate()}
                                         {isHoliday && isCurrentMonth && (
-                                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white text-xs text-white flex items-center justify-center">
-                                                ✕
-                                            </span>
-                                        )}
-                                        {!isBusinessOpen && !isPast && isCurrentMonth && !isHoliday && (
-                                            <span className="absolute top-0 right-0 w-2 h-2 bg-gray-400 rounded-full"></span>
+                                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-400 rounded-full"></span>
                                         )}
                                     </button>
                                 );
@@ -441,10 +454,10 @@ function SelectDateTimeContent() {
 
             {/* Available Time */}
             <div className="w-full max-w-md mx-auto mt-6">
-                <h2 className="text-base font-bold mb-2 text-primary">เลือกช่วงเวลา</h2>
+                <h2 className="text-base font-bold mb-3 text-gray-800 pl-1">เลือกช่วงเวลา</h2>
                 
                 {date && !isDateOpen(date) ? (
-                    <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="text-center p-6 bg-red-50 border border-red-100 rounded-xl">
                         {(() => {
                             const dateStr = format(date, 'yyyy-MM-dd');
                             const holidayInfo = holidayDates.find(holiday => holiday.date === dateStr);
@@ -456,17 +469,16 @@ function SelectDateTimeContent() {
                                         {holidayInfo.note && (
                                             <p className="text-red-500 text-sm mt-1">{holidayInfo.note}</p>
                                         )}
-                                        <p className="text-red-400 text-xs mt-2">กรุณาเลือกวันที่อื่น</p>
                                     </div>
                                 );
                             } else {
-                                return <p className="text-gray-600">วันที่เลือกปิดทำการ</p>;
+                                return <p className="text-gray-600 font-medium">ร้านปิดทำการในวันนี้</p>;
                             }
                         })()}
-                        <p className="text-sm text-gray-500">กรุณาเลือกวันอื่น</p>
+                        <p className="text-sm text-gray-500 mt-1">กรุณาเลือกวันอื่น</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-4 gap-2">
                         {timeQueues
                             .filter(q => q.time && isTimeInBusinessHours(q.time))
                             .sort((a, b) => String(a.time).localeCompare(String(b.time)))
@@ -481,13 +493,14 @@ function SelectDateTimeContent() {
                                     <button
                                         key={slot}
                                         onClick={() => !isDisabled && setTime(slot)}
-                                        className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition-colors
-                                            ${time === slot ? 'bg-primary-dark text-white shadow-lg' : 'bg-white text-primary border border-purple-100 hover:bg-purple-50'}
-                                            ${isDisabled ? 'opacity-40 cursor-not-allowed line-through' : ''}`}
+                                        className={`rounded-xl py-2 text-sm font-medium transition-all
+                                            ${time === slot 
+                                                ? 'bg-primary-dark text-white shadow-md transform scale-105' 
+                                                : 'bg-white text-gray-600 border border-gray-100 hover:border-primary hover:text-primary'}
+                                            ${isDisabled ? 'opacity-40 cursor-not-allowed bg-gray-50 border-transparent text-gray-400' : ''}`}
                                         disabled={isDisabled}
-                                        title={isFull ? 'คิวเต็ม' : isOverlapping ? 'เวลาทับซ้อนกับการจองอื่น' : ''}
                                     >
-                                        {slot} {isFull && <span className="text-xs">(เต็ม)</span>} {isOverlapping && !isFull && <span className="text-xs">(ทับ)</span>}
+                                        {slot} 
                                     </button>
                                 );
                             })}
@@ -498,11 +511,11 @@ function SelectDateTimeContent() {
             {/* technician Selection */}
             {useTechnician && time && (
                 <div className="w-full max-w-md mx-auto mt-6">
-                    <h2 className="text-base font-bold mb-2 text-primary">เลือกช่างเสริมสวย</h2>
+                    <h2 className="text-base font-bold mb-3 text-gray-800 pl-1">เลือกช่าง (Optional)</h2>
                     {loading ? (
-                        <div className="text-center">กำลังโหลดรายชื่อช่าง...</div>
+                        <div className="text-center py-4 text-gray-500">กำลังโหลดรายชื่อช่าง...</div>
                     ) : technicians.length === 0 ? (
-                        <div className="text-center text-gray-500 bg-gray-100 p-4 rounded-lg">ขออภัย ไม่มีช่างที่พร้อมให้บริการในขณะนี้</div>
+                        <div className="text-center text-gray-500 bg-gray-50 p-4 rounded-xl border border-gray-100">ไม่มีช่างที่พร้อมให้บริการ</div>
                     ) : (
                         <div className="space-y-3">
                             {technicians.map(technician => (
@@ -520,11 +533,11 @@ function SelectDateTimeContent() {
             )}
 
             {/* Confirm Button */}
-            <div className="w-full max-w-md mx-auto mt-8 mb-8">
+            <div className="w-full max-w-md mx-auto mt-8 mb-8 pb-10">
                 <button
                     onClick={handleConfirm}
-                    disabled={!date || !time || (useTechnician && !selectedTechnician)}
-                    className="w-full bg-primary-dark text-white py-4 rounded-2xl font-bold shadow-lg "
+                    disabled={!date || !time || (useTechnician && selectedTechnician && unavailableTechnicianIds.has(selectedTechnician.id))}
+                    className="w-full bg-primary-dark hover:bg-primary text-white py-4 rounded-full font-bold shadow-lg transform active:scale-95 transition-all disabled:bg-gray-300 disabled:shadow-none disabled:transform-none"
                 >
                     ถัดไป
                 </button>
@@ -539,7 +552,7 @@ export default function SelectDateTimePage() {
         <Suspense
             fallback={
             <div className="flex flex-col items-center justify-center min-h-screen w-full">
-            <div className="p-4 text-center text-lg text-gray-500">กำลังโหลด...</div>
+                <div className="p-4 text-center text-lg text-gray-500">กำลังโหลด...</div>
             </div>
             }
             >
@@ -547,4 +560,3 @@ export default function SelectDateTimePage() {
         </Suspense>
     );
 }
-

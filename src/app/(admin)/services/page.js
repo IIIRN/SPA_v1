@@ -157,7 +157,7 @@ export default function ServicesListPage() {
                   <p className="font-bold text-md text-gray-800">{service.serviceName || service.name}</p>
                   <p className="text-xs text-gray-400">{service.category}</p>
                 </div>
-                <div className="text-sm bg-primary text-white w-28 px-3 py-1 rounded">{formatServicePrice(service, profile)}</div>
+                <div className="text-sm bg-primary-dark text-white w-28 px-3 py-1 rounded">{formatServicePrice(service, profile)}</div>
               </div>
               <div className="text-sm text-gray-600 mt-2 border-t pt-2 space-y-1">
                 <p><strong>ระยะเวลา:</strong> {service.serviceType === 'multi-area' ? `${service.areas?.length || 0} พื้นที่` : `${service.duration ?? '-'} นาที`}</p>
