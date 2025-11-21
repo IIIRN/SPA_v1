@@ -32,7 +32,9 @@ const HistoryCard = ({ appointment, onBookAgain }) => {
                                     )}
                                     {appointment.serviceInfo?.selectedPackage && (
                                         <div className="text-xs text-gray-600">
-                                            📦 {appointment.serviceInfo.selectedPackage.name} ({appointment.serviceInfo.selectedPackage.duration} นาที)
+                                            {/* --- แก้ไข: แสดงชื่อแพคเกจ --- */}
+                                            📦 {appointment.serviceInfo.selectedPackage.name && <span className="font-bold">{appointment.serviceInfo.selectedPackage.name} </span>}
+                                            ({appointment.serviceInfo.selectedPackage.duration} นาที)
                                         </div>
                                     )}
                                 </div>
@@ -56,4 +58,3 @@ const HistoryCard = ({ appointment, onBookAgain }) => {
 };
 
 export default HistoryCard;
-
