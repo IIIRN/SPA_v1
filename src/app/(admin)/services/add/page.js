@@ -46,10 +46,11 @@ export default function AddServicePage() {
     }));
   };
 
+  // --- แก้ไข: เพิ่ม name: '' ในแพคเกจเริ่มต้น ---
   const handleAddArea = () => {
     setFormData(prev => ({
       ...prev,
-      areas: [...(prev.areas || []), { name: '', packages: [{ duration: '', price: '' }] }]
+      areas: [...(prev.areas || []), { name: '', packages: [{ name: '', duration: '', price: '' }] }]
     }));
   };
 
@@ -69,10 +70,11 @@ export default function AddServicePage() {
     });
   };
 
+  // --- แก้ไข: เพิ่ม name: '' ในแพคเกจใหม่ ---
   const handleAddPackage = (areaIdx) => {
     setFormData(prev => {
       const areas = [...(prev.areas || [])];
-      areas[areaIdx].packages = [...(areas[areaIdx].packages || []), { duration: '', price: '' }];
+      areas[areaIdx].packages = [...(areas[areaIdx].packages || []), { name: '', duration: '', price: '' }];
       return { ...prev, areas };
     });
   };
@@ -111,8 +113,9 @@ export default function AddServicePage() {
           return;
         }
         for (const pkg of area.packages) {
-          if (!pkg.duration || !pkg.price) {
-            showToast("กรุณากรอกระยะเวลาและราคาในทุกแพ็คเกจ", "error");
+          // --- แก้ไข: ตรวจสอบว่าต้องกรอกชื่อแพคเกจด้วย ---
+          if (!pkg.name || !pkg.duration || !pkg.price) {
+            showToast("กรุณากรอกชื่อแพคเกจ ระยะเวลา และราคาในทุกแพ็คเกจ", "error");
             return;
           }
         }
@@ -129,7 +132,6 @@ export default function AddServicePage() {
         createdAt: serverTimestamp(),
       };
 
-      // เพิ่ม completionNote เฉพาะเมื่อมีค่า
       if (formData.completionNote && formData.completionNote.trim()) {
         dataToSave.completionNote = formData.completionNote.trim();
       }
@@ -142,6 +144,7 @@ export default function AddServicePage() {
         dataToSave.areas = formData.areas.map(area => ({
           name: area.name,
           packages: area.packages.map(pkg => ({
+            name: pkg.name, // --- แก้ไข: บันทึกชื่อแพคเกจ ---
             duration: Number(pkg.duration) || 0,
             price: Number(pkg.price) || 0
           }))
@@ -213,12 +216,21 @@ export default function AddServicePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">แพ็คเกจ</label>
                     {area.packages.map((pkg, pkgIdx) => (
                       <div key={pkgIdx} className="flex items-center gap-2 mb-2">
+                        {/* --- แก้ไข: เพิ่ม Input ชื่อแพคเกจ --- */}
+                        <input
+                          type="text"
+                          placeholder="ชื่อแพคเกจ (เช่น 1 ครั้ง)"
+                          value={pkg.name}
+                          onChange={e => handlePackageChange(areaIdx, pkgIdx, 'name', e.target.value)}
+                          className="flex-1 p-2 border rounded-md min-w-[120px]"
+                          required
+                        />
                         <input
                           type="number"
                           placeholder="ระยะเวลา (นาที)"
                           value={pkg.duration}
                           onChange={e => handlePackageChange(areaIdx, pkgIdx, 'duration', e.target.value)}
-                          className="w-32 p-2 border rounded-md"
+                          className="w-24 md:w-32 p-2 border rounded-md"
                           required
                         />
                         <input
@@ -226,7 +238,7 @@ export default function AddServicePage() {
                           placeholder={`ราคา (${profile.currencySymbol})`}
                           value={pkg.price}
                           onChange={e => handlePackageChange(areaIdx, pkgIdx, 'price', e.target.value)}
-                          className="w-32 p-2 border rounded-md"
+                          className="w-24 md:w-32 p-2 border rounded-md"
                           required
                         />
                         <button type="button" onClick={() => handleRemovePackage(areaIdx, pkgIdx)} className="text-red-500 px-2">ลบ</button>
@@ -299,4 +311,3 @@ export default function AddServicePage() {
     </div>
   );
 }
-
