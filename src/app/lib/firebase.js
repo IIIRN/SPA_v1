@@ -3,8 +3,8 @@ import { initializeApp, getApps } from "firebase/app";
 import { 
   getFirestore, 
   initializeFirestore, 
-  memoryLocalCache // [1] เพิ่ม import นี้
-} from "firebase/firestore";
+  memoryLocalCache // [1] สำคัญมาก: ต้อง import ตัวนี้
+} from "firebase/firestore"; 
 import { getAuth } from "firebase/auth"; 
 
 const firebaseConfig = {
@@ -22,20 +22,17 @@ let db;
 if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
     
-    // [2] ปรับแต่ง settings ใหม่
+    // [2] กำหนดให้ใช้ memoryLocalCache() เท่านั้น
     db = initializeFirestore(app, {
-        experimentalForceLongPolling: true, // ยังคงไว้ เพราะจำเป็นสำหรับ LINE
-        localCache: memoryLocalCache(),      // <--- [สำคัญ] บังคับใช้ Memory Cache เท่านั้น แก้ปัญหาไฟล์ล็อก
-        // cacheSizeBytes: CACHE_SIZE_UNLIMITED // [ลบออก] ไม่ใช้แล้วเมื่อใช้ memoryLocalCache
+        localCache: memoryLocalCache(), // <--- หัวใจสำคัญ: แก้ปัญหา LINE ค้าง 100%
+        // experimentalForceLongPolling: true // (Optional) ถ้าใช้ memoryCache แล้ว อันนี้อาจไม่จำเป็น แต่ใส่ไว้ก็ไม่เสียหาย
     });
-    console.log("🔥 Firebase initialized with Memory Cache & Long Polling");
+    console.log("🔥 Firebase initialized with Memory Cache");
 
 } else {
     app = getApps()[0];
-    // [3] ใช้ initializeFirestore เสมอเพื่อให้แน่ใจว่าได้ instance ที่ config ถูกต้อง
-    // การเรียกซ้ำกับ app เดิมจะคืนค่า instance เดิมให้อัตโนมัติ
+    // [3] เรียกซ้ำเพื่อให้แน่ใจว่าได้ instance ที่ถูกต้อง
     db = initializeFirestore(app, {
-        experimentalForceLongPolling: true,
         localCache: memoryLocalCache()
     });
 }
