@@ -1,3 +1,4 @@
+// src/app/(employee)/check-in/page.js
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -12,6 +13,7 @@ import { getPaymentSettings } from '@/app/actions/settingsActions';
 import QRCode from 'qrcode';
 import generatePayload from 'promptpay-qr';
 import { useToast } from '@/app/components/Toast';
+import { Notification, ConfirmationModal } from '@/app/components/common/NotificationComponent'; // [1] ตรวจสอบ import
 
 // --- Modal สำหรับแสดง QR Code ชำระเงิน ---
 const PaymentQrModal = ({ show, onClose, appointment, profile }) => {
@@ -70,16 +72,28 @@ const PaymentQrModal = ({ show, onClose, appointment, profile }) => {
     );
 };
 
-// --- Modal หลักสำหรับจัดการนัดหมาย (แก้ไขแล้ว) ---
+// --- Modal หลักสำหรับจัดการนัดหมาย (แก้ไขเพิ่ม Confirmation) ---
 const ManagementModal = ({ appointment, onClose, onAction, profile }) => {
     const [showQr, setShowQr] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
+    
+    // [2] State สำหรับ Confirmation Modal
+    const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', action: null });
+    
     const { showToast } = useToast();
 
     if (!appointment) return null;
 
     const isPaid = appointment.paymentInfo?.paymentStatus === 'paid';
     const isCheckedIn = appointment.status === 'in_progress';
+
+    // ฟังก์ชันเรียก Action จริงๆ หลังจากยืนยันแล้ว
+    const executeConfirmAction = async () => {
+        if (confirmModal.action) {
+            await confirmModal.action();
+        }
+        setConfirmModal({ ...confirmModal, show: false });
+    };
 
     const handleUpdatePayment = async () => {
         if (!profile?.userId) return showToast("ไม่สามารถระบุตัวตนพนักงานได้", "error");
@@ -123,6 +137,34 @@ const ManagementModal = ({ appointment, onClose, onAction, profile }) => {
         setIsUpdating(false);
     }
 
+    // [3] ฟังก์ชันเรียก Modal ยืนยัน
+    const confirmPayment = () => {
+        setConfirmModal({
+            show: true,
+            title: "ยืนยันการชำระเงิน",
+            message: "ยืนยันว่าลูกค้าได้ชำระเงินครบถ้วนแล้วใช่หรือไม่?",
+            action: handleUpdatePayment
+        });
+    };
+
+    const confirmComplete = () => {
+        setConfirmModal({
+            show: true,
+            title: "ยืนยันเสร็จสิ้นบริการ",
+            message: "ต้องการบันทึกว่าการบริการนี้เสร็จสิ้นแล้วใช่หรือไม่?",
+            action: () => handleStatusChange('completed')
+        });
+    };
+
+    const confirmCancel = () => {
+        setConfirmModal({
+            show: true,
+            title: "ยืนยันการยกเลิก",
+            message: "คุณต้องการยกเลิกนัดหมายนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้",
+            action: () => handleStatusChange('cancelled')
+        });
+    };
+
     return (
         <>
             <div className="fixed inset-0 bg-black bg-opacity-70 z-50" onClick={onClose}></div>
@@ -153,7 +195,8 @@ const ManagementModal = ({ appointment, onClose, onAction, profile }) => {
                     {!isPaid && (
                         <div className="grid grid-cols-2 gap-3">
                             <button onClick={() => setShowQr(true)} disabled={isUpdating} className="w-full bg-blue-500 text-white py-2 rounded-lg font-semibold disabled:bg-gray-300">แสดง QR</button>
-                            <button onClick={handleUpdatePayment} disabled={isUpdating} className="w-full bg-green-500 text-white py-2 rounded-lg font-semibold disabled:bg-gray-300">ยืนยันชำระเงิน</button>
+                            {/* เปลี่ยนมาใช้ confirmPayment */}
+                            <button onClick={confirmPayment} disabled={isUpdating} className="w-full bg-green-500 text-white py-2 rounded-lg font-semibold disabled:bg-gray-300">ยืนยันชำระเงิน</button>
                         </div>
                     )}
                 </div>
@@ -174,18 +217,30 @@ const ManagementModal = ({ appointment, onClose, onAction, profile }) => {
                 <div className="bg-white p-4 rounded-lg shadow-sm">
                     <h3 className="font-semibold text-md mb-3">การดำเนินการอื่นๆ</h3>
                      <div className="grid grid-cols-2 gap-3">
-                        <button onClick={() => handleStatusChange('completed')} disabled={isUpdating || appointment.status === 'completed'} className="w-full bg-gray-600 text-white py-2 rounded-lg font-semibold disabled:bg-gray-300">เสร็จสิ้นบริการ</button>
-                        <button onClick={() => handleStatusChange('cancelled')} disabled={isUpdating || appointment.status === 'cancelled'} className="w-full bg-red-500 text-white py-2 rounded-lg font-semibold disabled:bg-gray-300">ยกเลิกนัด</button>
+                        {/* เปลี่ยนมาใช้ confirmComplete และ confirmCancel */}
+                        <button onClick={confirmComplete} disabled={isUpdating || appointment.status === 'completed'} className="w-full bg-gray-600 text-white py-2 rounded-lg font-semibold disabled:bg-gray-300">เสร็จสิ้นบริการ</button>
+                        <button onClick={confirmCancel} disabled={isUpdating || appointment.status === 'cancelled'} className="w-full bg-red-500 text-white py-2 rounded-lg font-semibold disabled:bg-gray-300">ยกเลิกนัด</button>
                     </div>
                 </div>
             </div>
+            
             <PaymentQrModal show={showQr} onClose={() => setShowQr(false)} appointment={appointment} profile={profile} />
+            
+            {/* [4] เพิ่ม Component Modal ยืนยัน */}
+            <ConfirmationModal
+                show={confirmModal.show}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={executeConfirmAction}
+                onCancel={() => setConfirmModal({ ...confirmModal, show: false })}
+                isProcessing={isUpdating}
+            />
         </>
     );
 };
 
 
-// --- Card แสดงข้อมูลนัดหมาย (แบบใหม่) ---
+// --- Card แสดงข้อมูลนัดหมาย (เหมือนเดิม) ---
 const AppointmentCard = ({ appointment, onManage }) => {
     const { profile } = useProfile();
     const appointmentDateTime = useMemo(() => {
@@ -195,7 +250,11 @@ const AppointmentCard = ({ appointment, onManage }) => {
 
     const checkInStatus = useMemo(() => {
         const diff = differenceInMinutes(appointmentDateTime, new Date());
-        if (appointment.status !== 'pending') {
+        // [แก้ไขเล็กน้อย] ถ้ากำลังใช้บริการ ให้แสดงสถานะที่เหมาะสม
+        if (appointment.status === 'in_progress') {
+             return { text: 'กำลังใช้บริการ', color: 'text-blue-600' };
+        }
+        if (appointment.status !== 'pending' && appointment.status !== 'confirmed' && appointment.status !== 'awaiting_confirmation') {
             return { text: '', color: '' };
         }
         if (diff > 60) {
@@ -251,7 +310,7 @@ const AppointmentCard = ({ appointment, onManage }) => {
     );
 };
 
-// --- หน้าหลัก (ปรับปรุงใหม่) ---
+// --- หน้าหลัก ---
 export default function CheckInPage() {
     const { liff, profile, loading: liffLoading } = useLiffContext();
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -315,11 +374,9 @@ export default function CheckInPage() {
     };
     
     const handleActionInModal = (updatedAppointment) => {
-        // อัพเดท state ของ appointment ใน list และใน modal ที่เปิดอยู่
         setAppointments(prev => prev.map(app => app.id === updatedAppointment.id ? updatedAppointment : app));
         setSelectedAppointment(updatedAppointment);
 
-        // ถ้าสถานะเป็นยกเลิก ให้ปิด Modal และเอาออกจาก List
         if (updatedAppointment.status === 'cancelled') {
             setAppointments(prev => prev.filter(app => app.id !== updatedAppointment.id));
             handleCloseModal();
@@ -382,4 +439,3 @@ export default function CheckInPage() {
         </div>
     );
 }
-
