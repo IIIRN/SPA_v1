@@ -34,6 +34,17 @@ export default function MyAppointmentsPage() {
     const [isCancelling, setIsCancelling] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
 
+    // --- [DEBUG STATE] ---
+    const [debugLogs, setDebugLogs] = useState([]);
+    const [showDebug, setShowDebug] = useState(true); // ตั้งเป็น false ถ้าอยากซ่อน
+
+    const addLog = (message) => {
+        const time = new Date().toLocaleTimeString('th-TH');
+        console.log(`[DEBUG ${time}] ${message}`);
+        setDebugLogs(prev => [`${time}: ${message}`, ...prev].slice(0, 20)); // เก็บแค่ 20 บรรทัดล่าสุด
+    };
+    // ---------------------
+
     useEffect(() => {
         if (notification.show) {
             const timer = setTimeout(() => setNotification({ ...notification, show: false }), 5000);
@@ -42,29 +53,47 @@ export default function MyAppointmentsPage() {
     }, [notification]);
 
     useEffect(() => {
-        if (liffLoading || !profile?.userId) {
+        addLog(`Effect Triggered. LIFF Loading: ${liffLoading}, UserID: ${profile?.userId}`);
+
+        if (liffLoading) {
+            addLog("Waiting for LIFF...");
+            return;
+        }
+
+        if (!profile?.userId) {
+            addLog("No User ID found. Stop fetching.");
             if (!liffLoading) setLoading(false);
             return;
         }
+        
         setLoading(true);
+        addLog("Start Firestore Query...");
+
         const appointmentsQuery = query(
             collection(db, 'appointments'),
             where("userId", "==", profile.userId),
             where("status", "in", ['awaiting_confirmation', 'confirmed', 'in_progress']),
             orderBy("appointmentInfo.dateTime", "asc")
         );
+
+        addLog("Attaching onSnapshot listener...");
         const unsubscribe = onSnapshot(appointmentsQuery, (snapshot) => {
+            addLog(`Snapshot Received! Docs: ${snapshot.docs.length}`);
+            addLog(`Metadata: FromCache=${snapshot.metadata.fromCache}, HasPendingWrites=${snapshot.metadata.hasPendingWrites}`);
+            
             const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAppointments(docs);
             setLoading(false);
         }, (error) => {
+            addLog(`Snapshot ERROR: ${error.message}`);
             console.error("Error fetching appointments:", error);
-            setNotification({ show: true, title: 'Error', message: 'Could not fetch appointments.', type: 'error' });
+            setNotification({ show: true, title: 'Error', message: 'Could not fetch appointments: ' + error.message, type: 'error' });
             setLoading(false);
         });
         
         const fetchHistory = async () => {
             try {
+                addLog("Fetching History (getDocs)...");
                 const bookingsQuery = query(
                     collection(db, 'appointments'),
                     where("userId", "==", profile.userId),
@@ -72,14 +101,20 @@ export default function MyAppointmentsPage() {
                     orderBy("appointmentInfo.dateTime", "desc")
                 );
                 const querySnapshot = await getDocs(bookingsQuery);
+                addLog(`History Fetched. Docs: ${querySnapshot.docs.length}`);
                 const bookingsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setHistoryBookings(bookingsData);
             } catch (error) {
+                addLog(`History Error: ${error.message}`);
                 console.error("Error fetching booking history:", error);
             }
         };
         fetchHistory();
-        return () => unsubscribe();
+
+        return () => {
+            addLog("Unsubscribing listener...");
+            unsubscribe();
+        };
     }, [profile, liffLoading]);
 
     const handleQrCodeClick = (appointmentId) => {
@@ -94,11 +129,14 @@ export default function MyAppointmentsPage() {
     const confirmCancelAppointment = async () => {
         if (!appointmentToCancel || !profile?.userId) return;
         setIsCancelling(true);
+        addLog(`Cancelling appointment: ${appointmentToCancel.id}`);
         const result = await cancelAppointmentByUser(appointmentToCancel.id, profile.userId);
 
         if (result.success) {
+            addLog("Cancel Success");
             setNotification({ show: true, title: 'สำเร็จ', message: 'การนัดหมายของคุณถูกยกเลิกแล้ว', type: 'success' });
         } else {
+            addLog(`Cancel Failed: ${result.error}`);
             setNotification({ show: true, title: 'ผิดพลาด', message: result.error, type: 'error' });
         }
         setIsCancelling(false);
@@ -117,7 +155,6 @@ export default function MyAppointmentsPage() {
         setIsConfirming(false);
     };
 
-
     // --- Loading ส่วน LIFF ---
     if (liffLoading) {
         return (
@@ -127,6 +164,7 @@ export default function MyAppointmentsPage() {
                     color="#553734" 
                     style={{ animationDuration: '3s' }}
                 />
+                <p className="mt-4 text-gray-500">Initializing LINE...</p>
             </div>
         );
     }
@@ -138,6 +176,24 @@ export default function MyAppointmentsPage() {
             <CustomerHeader showBackButton={false} showActionButtons={true} />
             <div className="p-4 space-y-5">
             <Notification {...notification} />
+            
+            {/* --- DEBUG CONSOLE (ใส่ไว้บนสุดให้เห็นชัดๆ) --- */}
+            {showDebug && (
+                <div className="bg-black text-green-400 p-3 rounded-md text-xs font-mono mb-4 overflow-hidden">
+                    <div className="flex justify-between items-center mb-2 border-b border-green-800 pb-1">
+                        <span className="font-bold">DEBUG CONSOLE</span>
+                        <button onClick={() => window.location.reload()} className="bg-green-800 px-2 py-1 text-white rounded">Force Reload</button>
+                    </div>
+                    <div className="h-32 overflow-y-auto flex flex-col-reverse">
+                        {debugLogs.map((log, index) => (
+                            <div key={index} className="border-b border-gray-800 py-0.5">{log}</div>
+                        ))}
+                    </div>
+                    <div className="mt-1 text-gray-500">UserID: {profile?.userId ? profile.userId.substring(0, 10) + '...' : 'None'}</div>
+                </div>
+            )}
+            {/* ---------------------------------------------- */}
+
             <ConfirmationModal
                 show={!!appointmentToCancel}
                 title="ยืนยันการยกเลิก"
@@ -163,6 +219,7 @@ export default function MyAppointmentsPage() {
                             color="#553734" 
                             style={{ animationDuration: '3s' }}
                         />
+                        <p className="text-sm text-gray-400 mt-2">Loading data...</p>
                     </div>
                 ) : appointments.length === 0 ? (
                     <div className="text-center text-gray-500 pt-10 bg-white p-8 rounded-xl shadow-sm">
