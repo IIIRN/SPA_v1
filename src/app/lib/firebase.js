@@ -4,7 +4,11 @@ import {
   initializeFirestore, 
   memoryLocalCache 
 } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; 
+import { 
+  getAuth, 
+  initializeAuth, 
+  inMemoryPersistence // [1] เพิ่มตัวนี้เพื่อแก้ Auth ค้าง
+} from "firebase/auth"; 
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,29 +19,34 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// [ไม้ตาย] ตั้งชื่อ App ใหม่เพื่อหนี Instance เดิมที่ค้าง Cache
-const APP_NAME = 'SPA_CLIENT_INSTANCE_V2'; 
+// เปลี่ยนชื่อ App อีกครั้งเพื่อให้มั่นใจว่าเป็น Instance ใหม่ที่ Config Auth แล้ว
+const APP_NAME = 'SPA_V5_FINAL_MEMORY'; 
 
 let app;
 let db;
+let auth;
 
 try {
-    // 1. ลองดึง App ชื่อนี้มาดูว่ามีหรือยัง
+    // 1. ลองดึง App เดิมมา (ถ้ามี)
     app = getApp(APP_NAME);
     db = getFirestore(app);
+    auth = getAuth(app);
 } catch (e) {
-    // 2. ถ้ายังไม่มี (หรือ Error) ให้สร้างใหม่ด้วย Config ที่ถูกต้อง 100%
+    // 2. ถ้ายังไม่มี ให้สร้างใหม่แบบ "Memory Only" ทั้งระบบ
     app = initializeApp(firebaseConfig, APP_NAME);
     
+    // Config 1: Database ห้ามเก็บไฟล์ (Memory Cache) + บังคับ HTTP (Long Polling)
     db = initializeFirestore(app, {
-        // ใช้ Memory Cache เท่านั้น (แก้ไฟล์ล็อก)
         localCache: memoryLocalCache(),
-        // บังคับ HTTP Long Polling (แก้เน็ตค้าง/WebSocket โดนบล็อก)
         experimentalForceLongPolling: true,
     });
-    console.log(`🔥 Firebase (${APP_NAME}) initialized: Memory Cache + Long Polling`);
-}
 
-const auth = getAuth(app); 
+    // Config 2: Auth ห้ามเก็บไฟล์ Session (Memory Persistence) [จุดที่แก้เพิ่ม]
+    auth = initializeAuth(app, {
+        persistence: inMemoryPersistence
+    });
+    
+    console.log(`🔥 Firebase (${APP_NAME}) initialized: All Memory Mode (DB + Auth)`);
+}
 
 export { db, auth };
