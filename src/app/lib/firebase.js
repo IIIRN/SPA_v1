@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getFirestore, 
   initializeFirestore, 
@@ -15,32 +15,27 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// [ไม้ตาย] ตั้งชื่อ App ใหม่เพื่อหนี Instance เดิมที่ค้าง Cache
+const APP_NAME = 'SPA_CLIENT_INSTANCE_V2'; 
+
 let app;
 let db;
 
-if (getApps().length === 0) {
-    app = initializeApp(firebaseConfig);
+try {
+    // 1. ลองดึง App ชื่อนี้มาดูว่ามีหรือยัง
+    app = getApp(APP_NAME);
+    db = getFirestore(app);
+} catch (e) {
+    // 2. ถ้ายังไม่มี (หรือ Error) ให้สร้างใหม่ด้วย Config ที่ถูกต้อง 100%
+    app = initializeApp(firebaseConfig, APP_NAME);
     
-    // [FORCE CONFIG] บังคับใช้ทั้ง Memory Cache และ Long Polling เพื่อแก้ปัญหา LINE ค้าง
     db = initializeFirestore(app, {
-        localCache: memoryLocalCache(),       // ไม่เก็บไฟล์ลงเครื่อง (แก้ Cache Lock)
-        experimentalForceLongPolling: true,   // <--- [สำคัญที่สุด] บังคับใช้ HTTP แทน WebSocket (แก้ Connection Hang)
+        // ใช้ Memory Cache เท่านั้น (แก้ไฟล์ล็อก)
+        localCache: memoryLocalCache(),
+        // บังคับ HTTP Long Polling (แก้เน็ตค้าง/WebSocket โดนบล็อก)
+        experimentalForceLongPolling: true,
     });
-    console.log("🔥 Firebase initialized: Memory Cache + Long Polling (Forced)");
-
-} else {
-    app = getApps()[0];
-    // พยายาม init ซ้ำเพื่อให้แน่ใจว่าได้ instance ที่ถูกต้อง (ถ้าทำได้)
-    try {
-        db = initializeFirestore(app, {
-            localCache: memoryLocalCache(),
-            experimentalForceLongPolling: true,
-        });
-    } catch (e) {
-        // ถ้า init ไปแล้ว จะเข้า case นี้ ให้ใช้ getFirestore ธรรมดา
-        // แต่มักจะเป็น instance ที่ถูกต้องจาก server component หรือ init ครั้งแรก
-        db = getFirestore(app);
-    }
+    console.log(`🔥 Firebase (${APP_NAME}) initialized: Memory Cache + Long Polling`);
 }
 
 const auth = getAuth(app); 
