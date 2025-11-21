@@ -1,4 +1,3 @@
-// src/app/(customer)/my-appointments/AppointmentCard.js
 "use client";
 
 import { format } from 'date-fns';
@@ -44,7 +43,9 @@ const AppointmentCard = ({ job, onQrCodeClick, onCancelClick, onConfirmClick, is
                                 )}
                                 {job.serviceInfo?.selectedPackage && (
                                     <div className="text-xs text-primary">
-                                         {job.serviceInfo.selectedPackage.name} ({job.serviceInfo.selectedPackage.duration} นาที)
+                                         {/* --- แก้ไข: แสดงชื่อแพคเกจ --- */}
+                                         {job.serviceInfo.selectedPackage.name && <span className="font-bold">{job.serviceInfo.selectedPackage.name} </span>}
+                                         ({job.serviceInfo.selectedPackage.duration} นาที)
                                     </div>
                                 )}
                             </div>
@@ -112,4 +113,3 @@ const AppointmentCard = ({ job, onQrCodeClick, onCancelClick, onConfirmClick, is
 };
 
 export default AppointmentCard;
-
