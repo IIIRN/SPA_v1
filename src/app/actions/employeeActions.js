@@ -5,14 +5,13 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 import { 
     sendBookingNotification
-    // sendCancellationNotification has been removed
 } from './lineActions';
 import { 
     sendServiceCompletedFlexMessage, 
     sendReviewFlexMessage,
     sendPaymentConfirmationFlexMessage
 } from './lineFlexActions';
-import { awardPointsForPurchase, awardPointsForVisit, awardPointsByPhone } from './pointActions'; 
+import { awardPointsForPurchase, awardPointsForVisit } from './pointActions'; 
 import { findOrCreateCustomer } from './customerActions'; 
 
 // --- Helper to get notification settings ---
@@ -92,8 +91,6 @@ export async function updateAppointmentStatus(appointmentId, newStatus, employee
                 id: appointmentId,
                 appointmentId: appointmentId,
             };
-
-            // Notification for cancellation has been removed as per user request.
 
             if (newStatus === 'completed') {
                 const totalPrice = appointmentData.paymentInfo?.totalPrice || 0;
@@ -215,7 +212,8 @@ export async function findAppointmentsByPhone(phoneNumber) {
 
         const q = db.collection('appointments')
             .where('customerInfo.phone', '==', phoneNumber)
-            .where('status', 'in', ['confirmed', 'awaiting_confirmation', 'pending'])
+            // [UPDATED] เพิ่มสถานะ 'in_progress' เข้าไปในการค้นหา
+            .where('status', 'in', ['confirmed', 'awaiting_confirmation', 'pending', 'in_progress'])
             .orderBy('date', 'asc')
             .orderBy('time', 'asc');
 
@@ -291,7 +289,7 @@ export async function fetchEmployees() {
     const employees = employeeSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      type: 'employee', // เพิ่ม property 'type' เพื่อระบุประเภท
+      type: 'employee',
     }));
 
     const sortedEmployees = employees.sort((a, b) => {
@@ -341,4 +339,3 @@ export async function updateEmployeeStatus(employeeId, status) {
         return { success: false, error: error.message };
     }
 }
-
