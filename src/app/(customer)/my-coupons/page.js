@@ -69,7 +69,7 @@ export default function MyCouponsPage() {
             {/* ปุ่มแลกคูปอง */}
             <div className="w-full flex justify-end mb-2">
                 <button
-                    className="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-xl shadow text-sm transition-colors"
+                    className="bg-primary-dark hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-xl shadow text-sm transition-colors"
                     onClick={() => router.push('/rewards')}
                 >
                     แลกคูปอง
@@ -107,4 +107,5 @@ export default function MyCouponsPage() {
         </div>
     );
 }
+
 
