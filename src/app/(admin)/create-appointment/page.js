@@ -370,7 +370,7 @@ export default function CreateAppointmentPage() {
         const dayOfWeek = selectedDate.getDay();
         const daySchedule = bookingSettings.weeklySchedule?.[dayOfWeek];
         const holiday = checkHolidayDate(selectedDate);
-        
+
         if (holiday.isHoliday) return [];
         if (!daySchedule?.isOpen) return [];
 
@@ -420,9 +420,9 @@ export default function CreateAppointmentPage() {
 
     // Handler สำหรับ Toggle Area (Option-Based)
     const handleToggleArea = (areaName) => {
-        setSelectedAreas(prev => 
-            prev.includes(areaName) 
-                ? prev.filter(a => a !== areaName) 
+        setSelectedAreas(prev =>
+            prev.includes(areaName)
+                ? prev.filter(a => a !== areaName)
                 : [...prev, areaName]
         );
     };
@@ -548,12 +548,12 @@ export default function CreateAppointmentPage() {
             if (selectedService.serviceType === 'multi-area' && selectedAreaIndex !== null && selectedPackageIndex !== null) {
                 const selectedArea = selectedService.areas?.[selectedAreaIndex] || null;
                 const selectedPackage = selectedArea?.packages?.[selectedPackageIndex] || null;
-                
+
                 serviceInfo.selectedArea = selectedArea;
                 serviceInfo.selectedPackage = selectedPackage;
                 serviceInfo.areaIndex = selectedAreaIndex;
                 serviceInfo.packageIndex = selectedPackageIndex;
-                
+
                 appointmentInfo.selectedArea = selectedArea;
                 appointmentInfo.selectedPackage = selectedPackage;
                 appointmentInfo.areaIndex = selectedAreaIndex;
@@ -563,7 +563,7 @@ export default function CreateAppointmentPage() {
             // Populate for option-based
             if (selectedService.serviceType === 'option-based' && selectedOptionIndex !== null) {
                 const optionName = selectedService.serviceOptions[selectedOptionIndex].name;
-                
+
                 serviceInfo.selectedOptionName = optionName;
                 serviceInfo.selectedAreas = selectedAreas;
 
@@ -621,7 +621,6 @@ export default function CreateAppointmentPage() {
     if (loading || profileLoading) {
         return <div className="text-center p-10">กำลังโหลดข้อมูล...</div>;
     }
-
     return (
         <div className="container mx-auto p-4 md:p-8">
             <div className="max-w-7xl mx-auto bg-white p-6 rounded-lg shadow-md">
@@ -632,7 +631,7 @@ export default function CreateAppointmentPage() {
                         <div className="lg:col-span-2 space-y-6">
                             <div className="p-4 border rounded-lg">
                                 <h2 className="text-sm font-semibold mb-3">1. บริการ</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {services.filter(s => s.status === 'available').map(s => {
                                         const isSelected = selectedServiceId === s.id;
                                         return (
@@ -640,20 +639,20 @@ export default function CreateAppointmentPage() {
                                                 type="button"
                                                 key={s.id}
                                                 onClick={() => handleServiceChange({ target: { value: s.id } })}
-                                                className={`w-full text-left p-4 rounded-lg border transition-all shadow-sm focus:outline-none ${isSelected ? 'border-primary bg-indigo-50 ring-2 ring-primary' : 'border-gray-200 bg-white hover:border-primary'
+                                                className={`w-full text-left p-3 rounded-lg border transition-all shadow-sm focus:outline-none ${isSelected ? 'border-primary bg-indigo-50 ring-2 ring-primary' : 'border-gray-200 bg-white hover:border-primary'
                                                     }`}
                                             >
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-3">
                                                     {s.imageUrl && (
-                                                        <img src={s.imageUrl} alt={s.serviceName} className="w-16 h-16 object-cover rounded-md border" />
+                                                        <img src={s.imageUrl} alt={s.serviceName} className="w-12 h-12 object-cover rounded-md border" />
                                                     )}
                                                     <div className="flex-1">
                                                         <div className="font-bold text-sm text-gray-800">{s.serviceName}</div>
-                                                        <div className="text-sm text-gray-500 mb-1">
+                                                        <div className="text-xs text-gray-500 mb-1">
                                                             {s.serviceType === 'multi-area'
                                                                 ? `${s.areas?.length || 0} พื้นที่`
-                                                                : s.serviceType === 'option-based' 
-                                                                    ? 'เลือกพื้นที่ + แพ็คเกจ' 
+                                                                : s.serviceType === 'option-based'
+                                                                    ? 'เลือกพื้นที่ + แพ็คเกจ'
                                                                     : `${s.duration || '-'} นาที`
                                                             }
                                                             {' | '}{profile?.currencySymbol}{(s.price ?? s.basePrice ?? 0).toLocaleString()}
@@ -679,8 +678,8 @@ export default function CreateAppointmentPage() {
                                                         setSelectedPackageIndex(null);
                                                     }}
                                                     className={`p-3 border rounded-md text-left transition-colors ${selectedAreaIndex === areaIdx
-                                                            ? 'bg-blue-100 border-blue-500 text-blue-800'
-                                                            : 'bg-white border-gray-300 hover:bg-gray-50'
+                                                        ? 'bg-blue-100 border-blue-500 text-blue-800'
+                                                        : 'bg-white border-gray-300 hover:bg-gray-50'
                                                         }`}
                                                 >
                                                     <div className="font-medium">{area.name}</div>
@@ -691,107 +690,114 @@ export default function CreateAppointmentPage() {
                                             ))}
                                         </div>
 
-                                        {selectedAreaIndex !== null && selectedService.areas[selectedAreaIndex]?.packages && (
-                                            <div className="mt-4">
-                                                <h4 className="text-md font-medium mb-2">เลือกแพ็คเกจ:</h4>
-                                                <div className="space-y-2">
-                                                    {selectedService.areas[selectedAreaIndex].packages.map((pkg, pkgIdx) => (
-                                                        <label key={pkgIdx} className="flex items-center gap-3 p-3 border rounded-md cursor-pointer hover:bg-gray-50">
-                                                            <input
-                                                                type="radio"
-                                                                name="package"
-                                                                checked={selectedPackageIndex === pkgIdx}
-                                                                onChange={() => setSelectedPackageIndex(pkgIdx)}
-                                                                className="h-4 w-4 text-blue-600"
-                                                            />
-                                                            <div className="flex-1">
-                                                                <div className="font-medium text-gray-900">
-                                                                    {pkg.name && <span className="font-bold text-indigo-600 mr-2">{pkg.name}</span>}
-                                                                    {pkg.duration} นาที
+                                        {
+                                            selectedAreaIndex !== null && selectedService.areas[selectedAreaIndex]?.packages && (
+                                                <div className="mt-4">
+                                                    <h4 className="text-md font-medium mb-2">เลือกแพ็คเกจ:</h4>
+                                                    <div className="space-y-2">
+                                                        {selectedService.areas[selectedAreaIndex].packages.map((pkg, pkgIdx) => (
+                                                            <label key={pkgIdx} className="flex items-center gap-3 p-3 border rounded-md cursor-pointer hover:bg-gray-50">
+                                                                <input
+                                                                    type="radio"
+                                                                    name="package"
+                                                                    checked={selectedPackageIndex === pkgIdx}
+                                                                    onChange={() => setSelectedPackageIndex(pkgIdx)}
+                                                                    className="h-4 w-4 text-blue-600"
+                                                                />
+                                                                <div className="flex-1">
+                                                                    <div className="font-medium text-gray-900">
+                                                                        {pkg.name && <span className="font-bold text-indigo-600 mr-2">{pkg.name}</span>}
+                                                                        {pkg.duration} นาที
+                                                                    </div>
+                                                                    <div className="text-sm text-gray-600">{pkg.price.toLocaleString()} {profile.currencySymbol}</div>
                                                                 </div>
-                                                                <div className="text-sm text-gray-600">{pkg.price.toLocaleString()} {profile.currencySymbol}</div>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )
+                                        }
+                                    </div >
+                                )
+                                }
+
+                                {/* UI สำหรับ Option-Based (New) */}
+                                {
+                                    selectedService?.serviceType === 'option-based' && (
+                                        <div className="mt-6 space-y-6 border-t pt-4">
+                                            {/* 1. Select Areas */}
+                                            <div>
+                                                <h3 className="text-md font-bold text-gray-700 mb-2">1. เลือกพื้นที่บริการ (เลือกได้มากกว่า 1)</h3>
+                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                                    {selectedService.selectableAreas?.map((areaName, idx) => (
+                                                        <label key={idx} className={`flex items-center gap-2 p-3 border rounded-md cursor-pointer transition-all ${selectedAreas.includes(areaName) ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-gray-300'}`}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedAreas.includes(areaName)}
+                                                                onChange={() => handleToggleArea(areaName)}
+                                                                className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                                                            />
+                                                            <span className="text-sm font-medium">{areaName}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* 2. Select Option */}
+                                            <div>
+                                                <h3 className="text-md font-bold text-gray-700 mb-2">2. เลือกแพ็คเกจ</h3>
+                                                <div className="space-y-2">
+                                                    {selectedService.serviceOptions?.map((opt, idx) => (
+                                                        <label key={idx} className={`flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all ${selectedOptionIndex === idx ? 'bg-green-50 border-green-500 ring-1 ring-green-200' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                                                            <div className="flex items-center gap-3">
+                                                                <input
+                                                                    type="radio"
+                                                                    name="serviceOption"
+                                                                    checked={selectedOptionIndex === idx}
+                                                                    onChange={() => setSelectedOptionIndex(idx)}
+                                                                    className="h-4 w-4 text-green-600"
+                                                                />
+                                                                <div>
+                                                                    <div className="font-bold text-gray-800">{opt.name}</div>
+                                                                    <div className="text-xs text-gray-500">{opt.duration} นาที/จุด</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="font-bold text-green-600">
+                                                                {opt.price.toLocaleString()} {profile.currencySymbol}
                                                             </div>
                                                         </label>
                                                     ))}
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                )}
+                                        </div>
+                                    )
+                                }
 
-                                {/* UI สำหรับ Option-Based (New) */}
-                                {selectedService?.serviceType === 'option-based' && (
-                                    <div className="mt-6 space-y-6 border-t pt-4">
-                                        {/* 1. Select Areas */}
-                                        <div>
-                                            <h3 className="text-md font-bold text-gray-700 mb-2">1. เลือกพื้นที่บริการ (เลือกได้มากกว่า 1)</h3>
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                                {selectedService.selectableAreas?.map((areaName, idx) => (
-                                                    <label key={idx} className={`flex items-center gap-2 p-3 border rounded-md cursor-pointer transition-all ${selectedAreas.includes(areaName) ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white border-gray-300'}`}>
+                                {
+                                    selectedService?.addOnServices?.length > 0 && (
+                                        <div className="mt-6 border-t pt-4">
+                                            <h3 className="text-md font-medium mb-2">บริการเสริม:</h3>
+                                            <div className="space-y-2">
+                                                {selectedService.addOnServices.map((addOn, idx) => (
+                                                    <label key={idx} className="flex items-center gap-3 p-2 border rounded-md cursor-pointer hover:bg-gray-50">
                                                         <input
                                                             type="checkbox"
-                                                            checked={selectedAreas.includes(areaName)}
-                                                            onChange={() => handleToggleArea(areaName)}
-                                                            className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                                                            checked={selectedAddOnNames.includes(addOn.name)}
+                                                            onChange={() => handleAddOnToggle(addOn.name)}
+                                                            className="h-4 w-4 rounded"
                                                         />
-                                                        <span className="text-sm font-medium">{areaName}</span>
+                                                        <span className="flex-1">{addOn.name}</span>
+                                                        <span className="text-sm text-gray-600">+{addOn.duration} นาที / +{addOn.price} {profile.currencySymbol}</span>
                                                     </label>
                                                 ))}
                                             </div>
                                         </div>
-
-                                        {/* 2. Select Option */}
-                                        <div>
-                                            <h3 className="text-md font-bold text-gray-700 mb-2">2. เลือกแพ็คเกจ</h3>
-                                            <div className="space-y-2">
-                                                {selectedService.serviceOptions?.map((opt, idx) => (
-                                                    <label key={idx} className={`flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all ${selectedOptionIndex === idx ? 'bg-green-50 border-green-500 ring-1 ring-green-200' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
-                                                        <div className="flex items-center gap-3">
-                                                            <input
-                                                                type="radio"
-                                                                name="serviceOption"
-                                                                checked={selectedOptionIndex === idx}
-                                                                onChange={() => setSelectedOptionIndex(idx)}
-                                                                className="h-4 w-4 text-green-600"
-                                                            />
-                                                            <div>
-                                                                <div className="font-bold text-gray-800">{opt.name}</div>
-                                                                <div className="text-xs text-gray-500">{opt.duration} นาที/จุด</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="font-bold text-green-600">
-                                                            {opt.price.toLocaleString()} {profile.currencySymbol}
-                                                        </div>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {selectedService?.addOnServices?.length > 0 && (
-                                    <div className="mt-6 border-t pt-4">
-                                        <h3 className="text-md font-medium mb-2">บริการเสริม:</h3>
-                                        <div className="space-y-2">
-                                            {selectedService.addOnServices.map((addOn, idx) => (
-                                                <label key={idx} className="flex items-center gap-3 p-2 border rounded-md cursor-pointer hover:bg-gray-50">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedAddOnNames.includes(addOn.name)}
-                                                        onChange={() => handleAddOnToggle(addOn.name)}
-                                                        className="h-4 w-4 rounded"
-                                                    />
-                                                    <span className="flex-1">{addOn.name}</span>
-                                                    <span className="text-sm text-gray-600">+{addOn.duration} นาที / +{addOn.price} {profile.currencySymbol}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                                    )
+                                }
+                            </div >
 
                             {/* Section 2: Calendar & Time */}
-                            <div className="p-4 border rounded-lg">
+                            < div className="p-4 border rounded-lg" >
                                 <h2 className="text-sm font-semibold mb-3">2. ช่างและวันเวลา</h2>
                                 <div className={`grid grid-cols-1 ${!usetechnician ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
                                     {/* Calendar Code (Same as original) */}
@@ -842,11 +848,11 @@ export default function CreateAppointmentPage() {
                                                     const currentMonth = activeMonth.getMonth();
                                                     const firstDay = new Date(currentYear, currentMonth, 1, 0, 0, 0);
                                                     const lastDay = new Date(currentYear, currentMonth + 1, 0, 0, 0, 0);
-                                                    
+
                                                     const days = [];
                                                     const today = new Date();
                                                     today.setHours(0, 0, 0, 0);
-                                                    
+
                                                     for (let i = 0; i < firstDay.getDay(); i++) {
                                                         days.push(<div key={`empty-${i}`} className="p-2" />);
                                                     }
@@ -890,14 +896,14 @@ export default function CreateAppointmentPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="w-full max-w-md mx-auto">
                                         <h2 className="text-base font-bold mb-2 text-primary">เลือกช่วงเวลา</h2>
                                         {/* ... (Time selection logic same as before) ... */}
                                         {appointmentDate && !isDateOpen(new Date(appointmentDate)) ? (
-                                             <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg">
-                                                 <p className="text-red-500 text-sm">วันหยุดทำการ</p>
-                                             </div>
+                                            <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg">
+                                                <p className="text-red-500 text-sm">วันหยุดทำการ</p>
+                                            </div>
                                         ) : (
                                             <div className="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto pr-1">
                                                 {bookingSettings.timeQueues
@@ -946,11 +952,11 @@ export default function CreateAppointmentPage() {
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                        </div>
+                            </div >
+                        </div >
 
                         {/* คอลัมน์ขวา: ขั้นตอน 3 */}
-                        <div className="lg:col-span-1">
+                        < div className="lg:col-span-1" >
                             <div className="p-4 border rounded-lg top-4 sticky">
                                 <h2 className="text-sm font-semibold mb-3">3. ข้อมูลลูกค้า</h2>
                                 <div className="grid grid-cols-1 gap-4">
@@ -971,7 +977,7 @@ export default function CreateAppointmentPage() {
                                         className="w-full p-2 border rounded-md"
                                         required
                                     />
-                                     <input
+                                    <input
                                         type="text"
                                         name="lineUserId"
                                         value={customerInfo.lineUserId}
@@ -1002,7 +1008,7 @@ export default function CreateAppointmentPage() {
                                     <div className="text-xs text-gray-500 text-right mb-4">
                                         ระยะเวลา: {totalDuration} นาที
                                     </div>
-                                    
+
                                     <button
                                         type="submit"
                                         disabled={isSubmitting || (usetechnician && !selectedtechnicianId)}
@@ -1012,10 +1018,10 @@ export default function CreateAppointmentPage() {
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
+                        </div >
+                    </div >
+                </form >
+            </div >
+        </div >
     );
 }
